@@ -469,7 +469,7 @@ def login_page():
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        role = st.radio("**Select Your Role:**", ["Student", "Teacher", "Admin"], horizontal=True)
+        role = st.radio("**Select Your Role:**", ["Student", "Teacher"], horizontal=True)
         username = st.text_input("**Username**", placeholder="Enter your username", key="login_username")
         password = st.text_input("**Password**", type="password", placeholder="Enter your password", key="login_password")
         
@@ -498,19 +498,77 @@ def login_page():
                 st.session_state.page = 'register'
                 st.rerun()
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
-        # Demo credentials in styled box
+        # Admin login link (hidden at bottom)
+        if st.button("🔒 Admin Access", key="admin_link", help="For administrators only"):
+            st.session_state.page = 'admin_login'
+            st.rerun()
+
+def admin_login_page():
+    """Admin-only login page"""
+    # Header with red theme for admin
+    st.markdown("""
+        <div style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                    padding: 3rem 2rem; border-radius: 20px; margin-bottom: 3rem;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);'>
+            <h1 style='color: white; text-align: center; font-size: 3rem; margin: 0; 
+                       text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
+                🔒 Admin Portal
+            </h1>
+            <p style='color: #ff6b6b; text-align: center; font-size: 1.2rem; margin: 1rem 0 0 0;
+                      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>
+                Authorized Personnel Only
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
         st.markdown("""
-            <div style='background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
-                        padding: 1.5rem; border-radius: 15px; border-left: 4px solid #2196F3;
-                        margin-top: 2rem;'>
-                <h4 style='color: #1976d2; margin: 0 0 1rem 0;'>💡 Demo Credentials</h4>
-                <p style='margin: 0.5rem 0; color: #0d47a1;'><strong>Student:</strong> sairam / sairam123</p>
-                <p style='margin: 0.5rem 0; color: #0d47a1;'><strong>Teacher:</strong> prof_bohra / teacher123</p>
-                <p style='margin: 0.5rem 0; color: #0d47a1;'><strong>Admin:</strong> admin / admin123</p>
+            <div style='background: white; padding: 2.5rem; border-radius: 20px; 
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                        border: 2px solid #1a1a2e;'>
+                <h2 style='color: #1a1a2e; text-align: center; margin: 0 0 2rem 0;'>
+                    🛡️ Administrator Login
+                </h2>
             </div>
         """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        username = st.text_input("**Admin Username**", placeholder="Enter admin username", key="admin_username")
+        password = st.text_input("**Admin Password**", type="password", placeholder="Enter admin password", key="admin_password")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            if st.button("🔐 Admin Login", use_container_width=True, type="primary"):
+                if username and password:
+                    user = st.session_state.app.verify_login(username, password, 'admin')
+                    if user:
+                        st.session_state.logged_in = True
+                        st.session_state.user = user
+                        st.session_state.role = 'admin'
+                        st.success(f"✅ Welcome, Administrator {user['name']}!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid admin credentials! Access denied.")
+                else:
+                    st.warning("⚠️ Please enter both username and password")
+        
+        with col_b:
+            if st.button("← Back to Login", use_container_width=True):
+                st.session_state.page = 'login'
+                st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Security warning
+        st.warning("⚠️ **Security Notice:** This area is restricted to authorized administrators only. Unauthorized access attempts are logged.")
 
 def register_page():
     """Display registration page"""
@@ -1036,6 +1094,8 @@ def main():
     if not st.session_state.logged_in:
         if st.session_state.page == 'register':
             register_page()
+        elif st.session_state.page == 'admin_login':
+            admin_login_page()
         else:
             login_page()
         return
