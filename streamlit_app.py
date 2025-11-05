@@ -171,41 +171,75 @@ st.markdown("""
     
     /* Metrics */
     .stMetric {
-        background: white;
+        background: #1e1e1e;
         padding: 1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border: 1px solid #333333;
+    }
+    
+    .stMetric label {
+        color: #b0b0b0 !important;
+    }
+    
+    .stMetric [data-testid="stMetricValue"] {
+        color: #ffffff !important;
     }
     
     /* Dataframe */
     .stDataFrame {
         border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        background: #1e1e1e;
     }
     
     /* Expander */
     .streamlit-expanderHeader {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: #2a2a2a;
         border-radius: 10px;
         font-weight: 600;
+        color: #ffffff !important;
+        border: 1px solid #444444;
+    }
+    
+    .streamlit-expanderContent {
+        background: #1e1e1e;
+        border: 1px solid #444444;
+        border-top: none;
     }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
+        background: transparent;
     }
     
     .stTabs [data-baseweb="tab"] {
-        background: white;
+        background: #2a2a2a;
         border-radius: 10px 10px 0 0;
-        padding: 1rem 2rem;
+        padding: 0.8rem 1.5rem;
         font-weight: 600;
+        color: #b0b0b0;
+        border: 1px solid #444444;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #333333;
+        color: #ffffff;
     }
     
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%);
-        color: white;
+        color: white !important;
+        border: 1px solid #6C0345;
+    }
+    
+    /* Tab content */
+    .stTabs [data-baseweb="tab-panel"] {
+        background: transparent;
+        padding-top: 1rem;
     }
     
     /* Divider */
@@ -224,13 +258,38 @@ st.markdown("""
     /* Radio Buttons */
     .stRadio > label {
         font-weight: 600;
-        color: #6C0345;
+        color: #ffffff !important;
+    }
+    
+    .stRadio [role="radiogroup"] {
+        background: #2a2a2a;
+        padding: 0.5rem;
+        border-radius: 10px;
+        border: 1px solid #444444;
+    }
+    
+    .stRadio [data-baseweb="radio"] {
+        background: #2a2a2a;
     }
     
     /* Selectbox */
     .stSelectbox > label {
         font-weight: 600;
-        color: #6C0345;
+        color: #ffffff !important;
+    }
+    
+    .stSelectbox [data-baseweb="select"] {
+        background: #2a2a2a !important;
+    }
+    
+    /* Containers */
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+        background: transparent;
+    }
+    
+    /* Column containers */
+    [data-testid="column"] {
+        background: transparent;
     }
     
     /* ===== MOBILE RESPONSIVE ===== */
