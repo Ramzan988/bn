@@ -750,17 +750,165 @@ def show_books_page():
         
         with col1:
             if st.button(f"📥 Borrow", key=f"borrow_{book['id']}", use_container_width=True):
-                borrow_book(book)
+                st.session_state[f"show_borrow_{book['id']}"] = True
         
         with col2:
             if st.button(f"👥 Who Has?", key=f"who_{book['id']}", use_container_width=True):
-                show_borrowers(book)
+                st.session_state[f"show_who_{book['id']}"] = True
         
         with col3:
             if st.button(f"ℹ️ Details", key=f"details_{book['id']}", use_container_width=True):
-                st.info(f"**Book Details:**\n\n📖 Title: {book['title']}\n✍️ Author: {book['author']}\n🆔 ID: {book['id']}\n📚 Total Copies: {book['copies']}\n✅ Available: {book['available']}")
+                st.session_state[f"show_details_{book['id']}"] = True
+        
+        # Show modals if triggered
+        if st.session_state.get(f"show_borrow_{book['id']}", False):
+            show_borrow_modal(book)
+        
+        if st.session_state.get(f"show_who_{book['id']}", False):
+            show_who_has_modal(book)
+        
+        if st.session_state.get(f"show_details_{book['id']}", False):
+            show_details_modal(book)
         
         st.markdown("<br>", unsafe_allow_html=True)
+
+@st.dialog("📥 Borrow Book")
+def show_borrow_modal(book):
+    """Show borrow confirmation modal"""
+    # Book details in modal
+    st.markdown(f"""
+        <div style='background: #1e1e1e; padding: 1.5rem; border-radius: 10px; 
+                    border-left: 4px solid #6C0345; margin-bottom: 1rem;'>
+            <h3 style='color: #ffffff; margin: 0 0 0.5rem 0;'>📖 {book['title']}</h3>
+            <p style='color: #b0b0b0; margin: 0;'>✍️ by {book['author']}</p>
+            <p style='color: #888888; margin: 0.5rem 0 0 0; font-size: 0.9rem;'>🆔 {book['id']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Availability status
+    if book['available'] > 0:
+        st.success(f"✅ **Available:** {book['available']} of {book['copies']} copies")
+        
+        # Borrow details
+        st.info(f"""
+        **📅 Borrow Period:** 14 days  
+        **📆 Due Date:** {(datetime.now() + timedelta(days=14)).strftime('%d %B %Y')}  
+        **⚠️ Late Fee:** ₹10 per day after due date
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Confirm Borrow", use_container_width=True, type="primary"):
+                borrow_book(book)
+                st.session_state[f"show_borrow_{book['id']}"] = False
+                st.rerun()
+        with col2:
+            if st.button("❌ Cancel", use_container_width=True):
+                st.session_state[f"show_borrow_{book['id']}"] = False
+                st.rerun()
+    else:
+        st.error("❌ **Not Available** - All copies are currently borrowed")
+        if st.button("Close", use_container_width=True):
+            st.session_state[f"show_borrow_{book['id']}"] = False
+            st.rerun()
+
+@st.dialog("👥 Who Has This Book?")
+def show_who_has_modal(book):
+    """Show who has borrowed this book"""
+    st.markdown(f"""
+        <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
+                    border-left: 4px solid #4facfe; margin-bottom: 1rem;'>
+            <h4 style='color: #ffffff; margin: 0;'>📖 {book['title']}</h4>
+            <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>by {book['author']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Get borrowers
+    borrowers = [t for t in st.session_state.app.transactions 
+                 if t['book_id'] == book['id'] and t['status'] == 'borrowed']
+    
+    if borrowers:
+        st.markdown(f"**📊 Currently Borrowed:** {len(borrowers)} of {book['copies']} copies")
+        st.divider()
+        
+        for trans in borrowers:
+            # Find user details
+            user_details = None
+            for role in ['students', 'teachers']:
+                user_details = next((u for u in st.session_state.app.users.get(role, []) 
+                                   if u['id'] == trans['user_id']), None)
+                if user_details:
+                    break
+            
+            if user_details:
+                st.markdown(f"""
+                    <div style='background: #252525; padding: 1rem; border-radius: 8px; 
+                                margin: 0.5rem 0; border-left: 3px solid #ffc107;'>
+                        <p style='color: #ffffff; margin: 0; font-weight: 600;'>👤 {trans['user_name']}</p>
+                        <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.85rem;'>
+                            📧 {user_details.get('email', 'Not provided')} | 
+                            📱 {user_details.get('contact', 'Not provided')}
+                        </p>
+                        <p style='color: #888888; margin: 0.3rem 0 0 0; font-size: 0.8rem;'>
+                            📅 Borrowed: {trans['borrow_date']} | Due: {trans['due_date']}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("✅ All copies are available - No one has borrowed this book yet!")
+    
+    if st.button("Close", use_container_width=True):
+        st.session_state[f"show_who_{book['id']}"] = False
+        st.rerun()
+
+@st.dialog("ℹ️ Book Details")
+def show_details_modal(book):
+    """Show complete book details"""
+    # Book cover placeholder
+    st.markdown("""
+        <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
+                    padding: 2rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;'>
+            <h1 style='color: white; margin: 0; font-size: 3rem;'>📚</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Book information
+    st.markdown(f"""
+        <div style='background: #1e1e1e; padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem;'>
+            <h2 style='color: #ffffff; margin: 0 0 1rem 0;'>{book['title']}</h2>
+            <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>✍️ Author:</strong> {book['author']}</p>
+            <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>🆔 Book ID:</strong> {book['id']}</p>
+            <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>📚 Total Copies:</strong> {book['copies']}</p>
+            <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>✅ Available:</strong> {book['available']}</p>
+            <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>📖 Borrowed:</strong> {book['copies'] - book['available']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Availability status
+    if book['available'] > 0:
+        st.success(f"✅ **Available for borrowing** ({book['available']} copies)")
+    else:
+        st.error("❌ **Currently unavailable** - All copies are borrowed")
+    
+    # Borrow info
+    st.info("""
+    **📋 Borrowing Information:**
+    - Borrow period: 14 days
+    - Late fee: ₹10 per day
+    - Maximum renewals: 2 times
+    """)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if book['available'] > 0:
+            if st.button("📥 Borrow This Book", use_container_width=True, type="primary"):
+                st.session_state[f"show_details_{book['id']}"] = False
+                st.session_state[f"show_borrow_{book['id']}"] = True
+                st.rerun()
+    with col2:
+        if st.button("Close", use_container_width=True):
+            st.session_state[f"show_details_{book['id']}"] = False
+            st.rerun()
 
 def borrow_book(book):
     """Borrow a book"""
@@ -800,38 +948,6 @@ def borrow_book(book):
     st.success(f"✅ Book borrowed successfully! Due date: {due_date}")
     st.balloons()
     st.rerun()
-
-def show_borrowers(book):
-    """Show who has borrowed the book"""
-    borrowers = [t for t in st.session_state.app.transactions 
-                if t['book_id'] == book['id'] and t['status'] == 'borrowed']
-    
-    if not borrowers:
-        st.info(f"✅ '{book['title']}' is currently available! You can borrow it directly.")
-        return
-    
-    st.markdown(f"### 👥 Who Has '{book['title']}'?")
-    st.info(f"💡 Currently borrowed by {len(borrowers)} user(s). You can contact them to request early return.")
-    
-    for trans in borrowers:
-        # Find user
-        user = None
-        for role in ['students', 'teachers']:
-            user = next((u for u in st.session_state.app.users.get(role, []) if u['id'] == trans['user_id']), None)
-            if user:
-                break
-        
-        with st.expander(f"👤 {trans['user_name']} (ID: {trans['user_id']})"):
-            st.write(f"**📅 Due Date:** {trans['due_date']}")
-            
-            if user:
-                st.markdown("**📞 Contact Information:**")
-                if user.get('contact', 'Not provided') != 'Not provided':
-                    st.write(f"📱 Phone: {user['contact']}")
-                if user.get('email', 'Not provided') != 'Not provided':
-                    st.write(f"📧 Email: {user['email']}")
-                if user.get('contact') == 'Not provided' and user.get('email') == 'Not provided':
-                    st.caption("Contact info not available")
 
 def my_transactions_page():
     """Display user's transactions"""
