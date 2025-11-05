@@ -28,11 +28,11 @@ st.markdown("""
     
     /* Headers */
     .main-header {
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 600;
         color: #6C0345;
         text-align: center;
-        padding: 1rem 0.5rem;
+        padding: 0.5rem 0.3rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%);
         -webkit-background-clip: text;
@@ -41,43 +41,43 @@ st.markdown("""
     }
     
     .sub-header {
-        font-size: 1rem;
+        font-size: 0.85rem;
         font-weight: 500;
         color: #F7C566;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
     
     /* Cards */
     .book-card {
         background: #1e1e1e;
-        padding: 1.5rem;
-        border-radius: 15px;
-        border-left: 5px solid #6C0345;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        padding: 0.8rem;
+        border-radius: 10px;
+        border-left: 4px solid #6C0345;
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
     .book-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(108, 3, 69, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(108, 3, 69, 0.4);
         background: #252525;
     }
     
     .stat-card {
         background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%);
         color: white;
-        padding: 2rem;
-        border-radius: 15px;
+        padding: 1rem;
+        border-radius: 10px;
         text-align: center;
-        box-shadow: 0 8px 16px rgba(108, 3, 69, 0.3);
+        box-shadow: 0 4px 8px rgba(108, 3, 69, 0.3);
         transition: transform 0.3s ease;
     }
     
     .stat-card:hover {
-        transform: scale(1.05);
+        transform: scale(1.03);
     }
     
     /* Buttons */
@@ -85,27 +85,28 @@ st.markdown("""
         background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%);
         color: white;
         border: none;
-        border-radius: 10px;
-        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.9rem;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(108, 3, 69, 0.3);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 3, 69, 0.3);
     }
     
     /* Input Fields */
     .stTextInput>div>div>input, .stSelectbox>div>div>select {
-        border-radius: 10px;
-        border: 2px solid #444444;
-        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid #444444;
+        padding: 0.5rem;
         transition: border-color 0.3s ease;
         background: #2a2a2a !important;
         color: #ffffff !important;
+        font-size: 0.9rem;
     }
     
     .stTextInput>div>div>input:focus {
@@ -516,13 +517,13 @@ def login_page():
     # Hero section with gradient - compact
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 1.5rem 1rem; border-radius: 12px; margin-bottom: 1.5rem;
-                    box-shadow: 0 4px 12px rgba(108, 3, 69, 0.3);'>
-            <h1 style='color: white; text-align: center; font-size: 2rem; margin: 0; 
+                    padding: 0.8rem 0.5rem; border-radius: 8px; margin-bottom: 1rem;
+                    box-shadow: 0 2px 8px rgba(108, 3, 69, 0.3);'>
+            <h1 style='color: white; text-align: center; font-size: 1.5rem; margin: 0; 
                        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);'>
                 📚 BookFlow LMS
             </h1>
-            <p style='color: #F7C566; text-align: center; font-size: 0.95rem; margin: 0.5rem 0 0 0;
+            <p style='color: #F7C566; text-align: center; font-size: 0.8rem; margin: 0.3rem 0 0 0;
                       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>
                 Modern Library Management System
             </p>
@@ -534,16 +535,16 @@ def login_page():
     with col2:
         # Login card with shadow - dark theme
         st.markdown("""
-            <div style='background: #1e1e1e; padding: 1.5rem; border-radius: 12px; 
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            <div style='background: #1e1e1e; padding: 0.8rem; border-radius: 8px; 
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                         border: 1px solid #333333;'>
-                <h2 style='color: #ffffff; text-align: center; margin: 0 0 1rem 0; font-size: 1.3rem;'>
+                <h2 style='color: #ffffff; text-align: center; margin: 0; font-size: 1.1rem;'>
                     🔐 Welcome Back!
                 </h2>
             </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
         
         role = st.radio("**Select Your Role:**", ["Student", "Teacher"], horizontal=True)
         username = st.text_input("**Username**", placeholder="Enter your username", key="login_username")
@@ -740,9 +741,9 @@ def show_books_page():
     # Header with gradient - compact version
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;'>
-            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.5rem;'>📚 Book Catalog</h2>
-            <p style='color: #F7C566; text-align: center; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
+                    padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;'>
+            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.2rem;'>📚 Book Catalog</h2>
+            <p style='color: #F7C566; text-align: center; margin: 0.2rem 0 0 0; font-size: 0.75rem;'>
                 Browse and borrow books from our collection
             </p>
         </div>
@@ -1184,9 +1185,9 @@ def admin_dashboard():
     # Header with gradient - compact
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;'>
-            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.5rem;'>📊 Admin Dashboard</h2>
-            <p style='color: #F7C566; text-align: center; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
+                    padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;'>
+            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.2rem;'>📊 Admin Dashboard</h2>
+            <p style='color: #F7C566; text-align: center; margin: 0.2rem 0 0 0; font-size: 0.75rem;'>
                 Complete library overview and management
             </p>
         </div>
@@ -1203,40 +1204,40 @@ def admin_dashboard():
     with col1:
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
-                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{total_users}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>👥 Total Users</p>
+                        padding: 0.8rem; border-radius: 8px; text-align: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
+                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{total_users}</h3>
+                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>👥 Users</p>
             </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-                        padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
-                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{total_books}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>📚 Total Books</p>
+                        padding: 0.8rem; border-radius: 8px; text-align: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
+                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{total_books}</h3>
+                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>📚 Books</p>
             </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                        padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
-                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{active_borrows}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>📖 Active Borrows</p>
+                        padding: 0.8rem; border-radius: 8px; text-align: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
+                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{active_borrows}</h3>
+                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>📖 Borrows</p>
             </div>
         """, unsafe_allow_html=True)
     
     with col4:
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
-                        padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
-                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>₹{total_fines}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>💰 Total Fines</p>
+                        padding: 0.8rem; border-radius: 8px; text-align: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
+                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>₹{total_fines}</h3>
+                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>💰 Fines</p>
             </div>
         """, unsafe_allow_html=True)
     
