@@ -466,7 +466,7 @@ class BookFlowApp:
                  'contact': '+91 9876543221', 'email': 'profjd@example.com'}
             ],
             'admin': [
-                {'id': 'ADMIN001', 'username': 'admin', 'password': 'morningstar', 'name': 'Administrator',
+                {'id': 'ADMIN001', 'username': 'admin', 'password': 'admin123', 'name': 'Administrator',
                  'contact': 'Not provided', 'email': 'Not provided'}
             ]
         }
