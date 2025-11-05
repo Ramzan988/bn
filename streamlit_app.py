@@ -584,16 +584,16 @@ def login_page():
 
 def admin_login_page():
     """Admin-only login page"""
-    # Header with red theme for admin
+    # Header with purple/red gradient like public page - compact
     st.markdown("""
-        <div style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                    padding: 3rem 2rem; border-radius: 20px; margin-bottom: 3rem;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);'>
-            <h1 style='color: white; text-align: center; font-size: 3rem; margin: 0; 
-                       text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
+        <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
+                    padding: 0.8rem 0.5rem; border-radius: 8px; margin-bottom: 1rem;
+                    box-shadow: 0 2px 8px rgba(108, 3, 69, 0.3);'>
+            <h1 style='color: white; text-align: center; font-size: 1.5rem; margin: 0; 
+                       text-shadow: 2px 2px 4px rgba(0,0,0,0.2);'>
                 🔒 Admin Portal
             </h1>
-            <p style='color: #ff6b6b; text-align: center; font-size: 1.2rem; margin: 1rem 0 0 0;
+            <p style='color: #F7C566; text-align: center; font-size: 0.8rem; margin: 0.3rem 0 0 0;
                       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>
                 Authorized Personnel Only
             </p>
@@ -604,16 +604,16 @@ def admin_login_page():
     
     with col2:
         st.markdown("""
-            <div style='background: white; padding: 2.5rem; border-radius: 20px; 
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                        border: 2px solid #1a1a2e;'>
-                <h2 style='color: #1a1a2e; text-align: center; margin: 0 0 2rem 0;'>
+            <div style='background: #1e1e1e; padding: 0.8rem; border-radius: 8px; 
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        border: 1px solid #333333;'>
+                <h2 style='color: #ffffff; text-align: center; margin: 0; font-size: 1.1rem;'>
                     🛡️ Administrator Login
                 </h2>
             </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
         
         username = st.text_input("**Admin Username**", placeholder="Enter admin username", key="admin_username")
         password = st.text_input("**Admin Password**", type="password", placeholder="Enter admin password", key="admin_password")
