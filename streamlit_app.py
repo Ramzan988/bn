@@ -852,8 +852,32 @@ def show_borrow_modal(book):
         </div>
     """, unsafe_allow_html=True)
     
+    # Check if user already has this book
+    already_borrowed = [t for t in st.session_state.app.transactions 
+                       if t['user_id'] == st.session_state.user['id'] 
+                       and t['book_id'] == book['id'] 
+                       and t['status'] == 'borrowed']
+    
+    if already_borrowed:
+        # Show error - already borrowed
+        trans = already_borrowed[0]
+        st.error(f"""
+        ❌ **You Already Have This Book!**
+        
+        **Current Borrow Details:**
+        - 📅 **Borrowed on:** {trans['borrow_date']}
+        - ⏰ **Due date:** {trans['due_date']}
+        - 📍 **Status:** Active
+        
+        💡 **Please return this book before borrowing it again!**
+        """)
+        
+        if st.button("Close", use_container_width=True):
+            st.session_state[f"show_borrow_{book['id']}"] = False
+            st.rerun()
+    
     # Availability status
-    if book['available'] > 0:
+    elif book['available'] > 0:
         st.success(f"✅ **Available:** {book['available']} of {book['copies']} copies")
         
         # Borrow details
@@ -993,7 +1017,18 @@ def borrow_book(book):
                      and t['status'] == 'borrowed']
     
     if active_borrows:
-        st.error("❌ You already have this book!")
+        # Show detailed error with due date
+        trans = active_borrows[0]
+        st.error(f"""
+        ❌ **Cannot Borrow - Already Borrowed!**
+        
+        You already have this book:
+        - 📚 **Book:** {book['title']}
+        - 📅 **Borrowed on:** {trans['borrow_date']}
+        - ⏰ **Due date:** {trans['due_date']}
+        
+        💡 **Tip:** Please return this book before borrowing it again!
+        """)
         return False
     
     # Create transaction
