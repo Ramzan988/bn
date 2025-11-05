@@ -671,6 +671,13 @@ def register_page():
 
 def show_books_page():
     """Display books catalog"""
+    # Show celebration modals if triggered
+    if st.session_state.get('show_borrow_success', False):
+        show_borrow_celebration()
+    
+    if st.session_state.get('show_return_success', False):
+        show_return_celebration(st.session_state.get('return_on_time', True))
+    
     # Header with gradient - compact version
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
@@ -799,8 +806,11 @@ def show_borrow_modal(book):
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ Confirm Borrow", use_container_width=True, type="primary"):
-                borrow_book(book)
+                success = borrow_book(book)
                 st.session_state[f"show_borrow_{book['id']}"] = False
+                if success:
+                    st.session_state['show_borrow_success'] = True
+                    st.session_state['borrowed_book_title'] = book['title']
                 st.rerun()
         with col2:
             if st.button("❌ Cancel", use_container_width=True):
@@ -914,7 +924,7 @@ def borrow_book(book):
     """Borrow a book"""
     if book['available'] <= 0:
         st.error(f"❌ '{book['title']}' is not available!")
-        return
+        return False
     
     # Check if user already has this book
     active_borrows = [t for t in st.session_state.app.transactions 
@@ -924,7 +934,7 @@ def borrow_book(book):
     
     if active_borrows:
         st.error("❌ You already have this book!")
-        return
+        return False
     
     # Create transaction
     due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
@@ -944,13 +954,82 @@ def borrow_book(book):
     st.session_state.app.transactions.append(transaction)
     book['available'] -= 1
     st.session_state.app.save_data()
+    st.session_state['borrow_due_date'] = due_date
     
-    st.success(f"✅ Book borrowed successfully! Due date: {due_date}")
+    return True
+
+@st.dialog("🎉 Success!")
+def show_borrow_celebration():
+    """Show celebration for successful borrow"""
+    st.markdown("""
+        <div style='text-align: center; padding: 2rem;'>
+            <h1 style='font-size: 4rem; margin: 0;'>🎉</h1>
+            <h2 style='color: #28a745; margin: 1rem 0;'>Book Borrowed Successfully!</h2>
+            <p style='font-size: 1.2rem; color: #ffffff;'>Happy Reading! 📚</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.success(f"""
+    ✅ **{st.session_state.get('borrowed_book_title', 'Book')}** is now yours!
+    
+    📅 **Due Date:** {st.session_state.get('borrow_due_date', 'N/A')}  
+    ⏰ **Remember:** Return on time to avoid late fees!
+    """)
+    
     st.balloons()
-    st.rerun()
+    
+    if st.button("🎊 Awesome!", use_container_width=True, type="primary"):
+        st.session_state['show_borrow_success'] = False
+        st.rerun()
+
+@st.dialog("🎊 Returned Successfully!")
+def show_return_celebration(on_time=True):
+    """Show celebration for successful return"""
+    if on_time:
+        st.markdown("""
+            <div style='text-align: center; padding: 2rem;'>
+                <h1 style='font-size: 4rem; margin: 0;'>🎊</h1>
+                <h2 style='color: #28a745; margin: 1rem 0;'>Thank You!</h2>
+                <p style='font-size: 1.2rem; color: #ffffff;'>Returned on time! 🌟</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.success(f"""
+        ✅ **Book returned successfully!**
+        
+        🌟 **Great job!** You returned the book on time!  
+        💚 **No late fees!** Keep up the good work!  
+        📚 **Borrow more books** and keep reading!
+        """)
+        
+        st.balloons()
+    else:
+        st.markdown("""
+            <div style='text-align: center; padding: 2rem;'>
+                <h1 style='font-size: 4rem; margin: 0;'>📚</h1>
+                <h2 style='color: #ffc107; margin: 1rem 0;'>Book Returned</h2>
+                <p style='font-size: 1.2rem; color: #ffffff;'>Thank you! ⏰</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.warning(f"""
+        ✅ **Book returned successfully!**
+        
+        ⚠️ **Late Return:** Please check if any fine applies  
+        💡 **Next time:** Try to return on time to avoid fees  
+        📚 **Keep reading!**
+        """)
+    
+    if st.button("👍 Got it!", use_container_width=True, type="primary"):
+        st.session_state['show_return_success'] = False
+        st.rerun()
 
 def my_transactions_page():
     """Display user's transactions"""
+    # Show celebration modal if triggered
+    if st.session_state.get('show_return_success', False):
+        show_return_celebration(st.session_state.get('return_on_time', True))
+    
     st.markdown("## 📊 My Transactions")
     
     user_trans = [t for t in st.session_state.app.transactions 
@@ -1020,29 +1099,35 @@ def return_book(trans):
     return_date = datetime.now()
     days_late = (return_date - due_date).days
     
+    on_time = days_late <= 0
+    
     if days_late > 0:
         trans['fine'] = days_late * 10
     
     # Update book availability
     book_list = st.session_state.app.books['student_books'] if st.session_state.role != 'teacher' else st.session_state.app.books['teacher_books']
+    if st.session_state.role == 'admin':
+        book_list = st.session_state.app.books['student_books'] + st.session_state.app.books['teacher_books']
+    
     book = next((b for b in book_list if b['id'] == trans['book_id']), None)
     if book:
         book['available'] += 1
     
     st.session_state.app.save_data()
-    st.success("✅ Book returned successfully!")
-    if trans['fine'] > 0:
-        st.warning(f"⚠️ Late return fine: ₹{trans['fine']}")
+    
+    # Trigger celebration modal
+    st.session_state['show_return_success'] = True
+    st.session_state['return_on_time'] = on_time
     st.rerun()
 
 def admin_dashboard():
     """Admin dashboard"""
-    # Header with gradient
+    # Header with gradient - compact
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 2rem; border-radius: 15px; margin-bottom: 2rem;'>
-            <h1 style='color: white; text-align: center; margin: 0;'>📊 Admin Dashboard</h1>
-            <p style='color: #F7C566; text-align: center; margin: 0.5rem 0 0 0;'>
+                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;'>
+            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.5rem;'>📊 Admin Dashboard</h2>
+            <p style='color: #F7C566; text-align: center; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
                 Complete library overview and management
             </p>
         </div>
