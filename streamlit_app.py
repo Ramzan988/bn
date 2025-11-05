@@ -1322,22 +1322,122 @@ def manage_users_admin():
     """Admin user management"""
     st.markdown("### 👥 User Management")
     
+    # Add new user section
+    with st.expander("➕ Add New User"):
+        col1, col2 = st.columns(2)
+        with col1:
+            new_name = st.text_input("Full Name", key="new_user_name")
+            new_username = st.text_input("Username", key="new_user_username")
+            new_password = st.text_input("Password", type="password", key="new_user_password")
+            new_id = st.text_input("User ID", key="new_user_id")
+        with col2:
+            new_role = st.selectbox("Role", ["Student", "Teacher"], key="new_user_role")
+            new_contact = st.text_input("Contact", key="new_user_contact")
+            new_email = st.text_input("Email", key="new_user_email")
+        
+        if st.button("💾 Add User", use_container_width=True):
+            if all([new_name, new_username, new_password, new_id]):
+                # Check for duplicates
+                role_key = 'students' if new_role == 'Student' else 'teachers'
+                existing = any(u['username'] == new_username or u['id'] == new_id 
+                             for role in ['students', 'teachers'] 
+                             for u in st.session_state.app.users.get(role, []))
+                
+                if existing:
+                    st.error("❌ Username or ID already exists!")
+                else:
+                    new_user = {
+                        'id': new_id.upper(),
+                        'name': new_name,
+                        'username': new_username,
+                        'password': new_password,
+                        'contact': new_contact,
+                        'email': new_email
+                    }
+                    st.session_state.app.users[role_key].append(new_user)
+                    st.session_state.app.save_data()
+                    st.success(f"✅ User {new_name} added successfully!")
+                    st.rerun()
+            else:
+                st.error("❌ Name, Username, Password, and ID are required!")
+    
+    st.divider()
+    
+    # List all users with edit/delete
     all_users = []
     for role in ['students', 'teachers']:
         for user in st.session_state.app.users.get(role, []):
             all_users.append({**user, 'role': role})
     
     if all_users:
-        # Display users in cards
-        for user in all_users:
-            with st.expander(f"👤 {user['name']} ({user['id']})"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Username:** {user['username']}")
-                    st.write(f"**Role:** {user['role'].title()}")
-                with col2:
-                    st.write(f"**Contact:** {user.get('contact', 'Not provided')}")
-                    st.write(f"**Email:** {user.get('email', 'Not provided')}")
+        st.markdown(f"**Total Users:** {len(all_users)} (Students: {len(st.session_state.app.users.get('students', []))}, Teachers: {len(st.session_state.app.users.get('teachers', []))})")
+        st.divider()
+        
+        # Display users in dark cards
+        for idx, user in enumerate(all_users):
+            st.markdown(f"""
+                <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
+                            margin: 0.5rem 0; border-left: 4px solid #6C0345;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);'>
+                    <p style='color: #ffffff; margin: 0; font-weight: 600; font-size: 1.1rem;'>👤 {user['name']}</p>
+                    <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
+                        🆔 {user['id']} | 👨‍💼 {user['role'].title()} | 📧 {user.get('email', 'N/A')} | 📱 {user.get('contact', 'N/A')}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2, col3 = st.columns([1, 1, 3])
+            with col1:
+                if st.button("✏️ Edit", key=f"edit_user_{idx}", use_container_width=True):
+                    st.session_state[f'editing_user_{idx}'] = True
+                    st.rerun()
+            with col2:
+                if st.button("🗑️ Delete", key=f"delete_user_{idx}", use_container_width=True):
+                    # Check for active borrows
+                    active_borrows = [t for t in st.session_state.app.transactions 
+                                    if t['user_id'] == user['id'] and t['status'] == 'borrowed']
+                    if active_borrows:
+                        st.error(f"❌ Cannot delete! {user['name']} has {len(active_borrows)} active borrow(s)")
+                    else:
+                        st.session_state.app.users[user['role']] = [u for u in st.session_state.app.users[user['role']] if u['id'] != user['id']]
+                        st.session_state.app.save_data()
+                        st.success(f"✅ User {user['name']} deleted!")
+                        st.rerun()
+            
+            # Edit form
+            if st.session_state.get(f'editing_user_{idx}', False):
+                with st.expander(f"✏️ Edit {user['name']}", expanded=True):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        edit_name = st.text_input("Name", value=user['name'], key=f"edit_name_{idx}")
+                        edit_username = st.text_input("Username", value=user['username'], key=f"edit_username_{idx}")
+                        edit_password = st.text_input("Password", value=user['password'], type="password", key=f"edit_password_{idx}")
+                    with col_b:
+                        edit_contact = st.text_input("Contact", value=user.get('contact', ''), key=f"edit_contact_{idx}")
+                        edit_email = st.text_input("Email", value=user.get('email', ''), key=f"edit_email_{idx}")
+                    
+                    col_save, col_cancel = st.columns(2)
+                    with col_save:
+                        if st.button("💾 Save Changes", key=f"save_{idx}", use_container_width=True):
+                            # Update user
+                            for u in st.session_state.app.users[user['role']]:
+                                if u['id'] == user['id']:
+                                    u['name'] = edit_name
+                                    u['username'] = edit_username
+                                    u['password'] = edit_password
+                                    u['contact'] = edit_contact
+                                    u['email'] = edit_email
+                                    break
+                            st.session_state.app.save_data()
+                            st.session_state[f'editing_user_{idx}'] = False
+                            st.success("✅ User updated successfully!")
+                            st.rerun()
+                    with col_cancel:
+                        if st.button("❌ Cancel", key=f"cancel_{idx}", use_container_width=True):
+                            st.session_state[f'editing_user_{idx}'] = False
+                            st.rerun()
+            
+            st.divider()
     else:
         st.info("No users found")
 
@@ -1346,15 +1446,19 @@ def view_all_transactions():
     st.markdown("### 📈 All Transactions")
     
     if st.session_state.app.transactions:
-        # Display transactions
+        # Display transactions in dark cards
         for trans in st.session_state.app.transactions:
             status_color = "#28a745" if trans['status'] == 'returned' else "#ffc107"
             st.markdown(f"""
-                <div style='background: white; padding: 1rem; border-radius: 10px; 
-                            margin: 0.5rem 0; border-left: 4px solid {status_color};'>
-                    <strong>{trans['user_name']}</strong> - {trans['book_title']}<br>
-                    <small>Borrowed: {trans['borrow_date']} | Due: {trans['due_date']} | Status: {trans['status'].title()}</small>
-                    {f"<br><span style='color: #dc3545;'>Fine: ₹{trans['fine']}</span>" if trans['fine'] > 0 else ""}
+                <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
+                            margin: 0.5rem 0; border-left: 4px solid {status_color};
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);'>
+                    <p style='color: #ffffff; margin: 0; font-weight: 600;'>{trans['user_name']} - {trans['book_title']}</p>
+                    <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.85rem;'>
+                        📅 Borrowed: {trans['borrow_date']} | Due: {trans['due_date']} | 
+                        Status: <span style='color: {status_color};'>{trans['status'].title()}</span>
+                    </p>
+                    {f"<p style='color: #dc3545; margin: 0.3rem 0 0 0; font-weight: 600;'>💰 Fine: ₹{trans['fine']}</p>" if trans['fine'] > 0 else ""}
                 </div>
             """, unsafe_allow_html=True)
     else:
