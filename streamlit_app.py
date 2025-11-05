@@ -28,11 +28,11 @@ st.markdown("""
     
     /* Headers */
     .main-header {
-        font-size: 3.5rem;
-        font-weight: 800;
+        font-size: 2rem;
+        font-weight: 700;
         color: #6C0345;
         text-align: center;
-        padding: 2rem 1rem;
+        padding: 1rem 0.5rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%);
         -webkit-background-clip: text;
@@ -41,28 +41,29 @@ st.markdown("""
     }
     
     .sub-header {
-        font-size: 1.8rem;
-        font-weight: 600;
+        font-size: 1rem;
+        font-weight: 500;
         color: #F7C566;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
     
     /* Cards */
     .book-card {
-        background: white;
+        background: #1e1e1e;
         padding: 1.5rem;
         border-radius: 15px;
         border-left: 5px solid #6C0345;
         margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
     .book-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(108, 3, 69, 0.2);
+        box-shadow: 0 8px 15px rgba(108, 3, 69, 0.4);
+        background: #252525;
     }
     
     .stat-card {
@@ -453,21 +454,18 @@ def logout():
 
 def login_page():
     """Display login page"""
-    # Hero section with gradient
+    # Hero section with gradient - compact
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 4rem 2rem; border-radius: 20px; margin-bottom: 3rem;
-                    box-shadow: 0 10px 30px rgba(108, 3, 69, 0.3);'>
-            <h1 style='color: white; text-align: center; font-size: 4rem; margin: 0; 
+                    padding: 1.5rem 1rem; border-radius: 12px; margin-bottom: 1.5rem;
+                    box-shadow: 0 4px 12px rgba(108, 3, 69, 0.3);'>
+            <h1 style='color: white; text-align: center; font-size: 2rem; margin: 0; 
                        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);'>
                 📚 BookFlow LMS
             </h1>
-            <p style='color: #F7C566; text-align: center; font-size: 1.5rem; margin: 1rem 0 0 0;
+            <p style='color: #F7C566; text-align: center; font-size: 0.95rem; margin: 0.5rem 0 0 0;
                       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>
                 Modern Library Management System
-            </p>
-            <p style='color: white; text-align: center; font-size: 1rem; margin: 0.5rem 0 0 0; opacity: 0.9;'>
-                Borrow, Return, and Manage Books with Ease
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -475,11 +473,12 @@ def login_page():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Login card with shadow
+        # Login card with shadow - dark theme
         st.markdown("""
-            <div style='background: white; padding: 2.5rem; border-radius: 20px; 
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.1);'>
-                <h2 style='color: #6C0345; text-align: center; margin: 0 0 2rem 0;'>
+            <div style='background: #1e1e1e; padding: 1.5rem; border-radius: 12px; 
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        border: 1px solid #333333;'>
+                <h2 style='color: #ffffff; text-align: center; margin: 0 0 1rem 0; font-size: 1.3rem;'>
                     🔐 Welcome Back!
                 </h2>
             </div>
@@ -672,12 +671,12 @@ def register_page():
 
 def show_books_page():
     """Display books catalog"""
-    # Header with gradient
+    # Header with gradient - compact version
     st.markdown("""
         <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 2rem; border-radius: 15px; margin-bottom: 2rem;'>
-            <h1 style='color: white; text-align: center; margin: 0;'>📚 Book Catalog</h1>
-            <p style='color: #F7C566; text-align: center; margin: 0.5rem 0 0 0;'>
+                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;'>
+            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.5rem;'>📚 Book Catalog</h2>
+            <p style='color: #F7C566; text-align: center; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
                 Browse and borrow books from our collection
             </p>
         </div>
@@ -720,27 +719,27 @@ def show_books_page():
             status_text = "Not Available"
             status_icon = "❌"
         
-        # Create mobile-responsive card
+        # Create mobile-responsive dark card
         st.markdown(f"""
-            <div style='background: white; padding: 1.5rem; border-radius: 15px; 
-                        margin: 1rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                        border-left: 5px solid {status_color};
-                        transition: transform 0.3s ease;'>
+            <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
+                        margin: 0.5rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        border-left: 4px solid {status_color};
+                        transition: all 0.3s ease;'>
                 <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
                     <div style='flex: 1; min-width: 200px;'>
-                        <h3 style='color: #6C0345; margin: 0 0 0.5rem 0; font-size: clamp(1rem, 2vw, 1.5rem);'>📖 {book['title']}</h3>
-                        <p style='color: #6c757d; margin: 0 0 0.5rem 0; font-size: clamp(0.85rem, 1.5vw, 1rem);'>✍️ by {book['author']}</p>
-                        <p style='color: #6c757d; margin: 0; font-size: clamp(0.75rem, 1.2vw, 0.9rem);'>🆔 {book['id']}</p>
+                        <h3 style='color: #ffffff; margin: 0 0 0.3rem 0; font-size: 1.1rem;'>📖 {book['title']}</h3>
+                        <p style='color: #b0b0b0; margin: 0 0 0.2rem 0; font-size: 0.9rem;'>✍️ {book['author']}</p>
+                        <p style='color: #888888; margin: 0; font-size: 0.8rem;'>🆔 {book['id']}</p>
                     </div>
-                    <div style='text-align: center; padding: 0 1rem; min-width: 120px;'>
-                        <div style='background: {status_color}; color: white; padding: 0.5rem 1rem; 
-                                    border-radius: 10px; font-weight: 600; font-size: clamp(0.8rem, 1.5vw, 1rem);'>
+                    <div style='text-align: center; padding: 0 1rem; min-width: 100px;'>
+                        <div style='background: {status_color}; color: white; padding: 0.4rem 0.8rem; 
+                                    border-radius: 8px; font-weight: 600; font-size: 0.85rem;'>
                             {status_icon} {status_text}
                         </div>
-                        <p style='margin: 0.5rem 0 0 0; font-size: clamp(1rem, 2vw, 1.2rem); font-weight: 600; color: #6C0345;'>
+                        <p style='margin: 0.4rem 0 0 0; font-size: 1.1rem; font-weight: 600; color: #ffffff;'>
                             {book['available']}/{book['copies']}
                         </p>
-                        <p style='margin: 0; font-size: clamp(0.7rem, 1.2vw, 0.8rem); color: #6c757d;'>Available/Total</p>
+                        <p style='margin: 0; font-size: 0.75rem; color: #888888;'>Available</p>
                     </div>
                 </div>
             </div>
@@ -1120,15 +1119,20 @@ def main():
     
     # Logged in - Show sidebar
     with st.sidebar:
-        st.markdown(f"### 👤 {st.session_state.user['name']}")
-        st.caption(f"Role: {st.session_state.role.title()}")
-        st.caption(f"ID: {st.session_state.user['id']}")
-        st.divider()
+        # Compact user info
+        st.markdown(f"""
+            <div style='background: #1e1e1e; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;
+                        border-left: 3px solid #6C0345;'>
+                <p style='margin: 0; font-size: 1rem; font-weight: 600; color: #ffffff;'>👤 {st.session_state.user['name']}</p>
+                <p style='margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #b0b0b0;'>{st.session_state.role.title()} • {st.session_state.user['id']}</p>
+            </div>
+        """, unsafe_allow_html=True)
         
+        st.markdown("**Navigation**")
         if st.session_state.role == 'admin':
-            menu = st.radio("Navigation", ["📊 Dashboard", "📚 Books", "🚪 Logout"])
+            menu = st.radio("", ["📊 Dashboard", "📚 Books", "🚪 Logout"], label_visibility="collapsed")
         else:
-            menu = st.radio("Navigation", ["📚 View Books", "📊 My Transactions", "🚪 Logout"])
+            menu = st.radio("", ["📚 View Books", "📊 My Transactions", "🚪 Logout"], label_visibility="collapsed")
         
         if menu == "🚪 Logout":
             logout()
