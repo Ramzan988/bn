@@ -17,7 +17,13 @@ st.markdown("""
 <style>
     /* Main App Styling */
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        color: #ffffff;
+    }
+    
+    /* Global text color */
+    .stMarkdown, .stText, p, span, div {
+        color: #e0e0e0 !important;
     }
     
     /* Headers */
@@ -92,21 +98,33 @@ st.markdown("""
     }
     
     /* Input Fields */
-    .stTextInput>div>div>input {
+    .stTextInput>div>div>input, .stSelectbox>div>div>select {
         border-radius: 10px;
-        border: 2px solid #e0e0e0;
+        border: 2px solid #444444;
         padding: 0.75rem;
         transition: border-color 0.3s ease;
+        background: #2a2a2a !important;
+        color: #ffffff !important;
     }
     
     .stTextInput>div>div>input:focus {
         border-color: #6C0345;
-        box-shadow: 0 0 0 2px rgba(108, 3, 69, 0.1);
+        box-shadow: 0 0 0 2px rgba(108, 3, 69, 0.3);
+    }
+    
+    /* Labels */
+    .stTextInput>label, .stSelectbox>label, .stRadio>label {
+        color: #ffffff !important;
     }
     
     /* Sidebar */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #6C0345 0%, #DC143C 100%);
+    .css-1d391kg, [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%) !important;
+        border-right: 2px solid #6C0345;
+    }
+    
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
     }
     
     /* Success/Error/Info Boxes */
