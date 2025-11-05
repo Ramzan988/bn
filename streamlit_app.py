@@ -213,6 +213,117 @@ st.markdown("""
         font-weight: 600;
         color: #6C0345;
     }
+    
+    /* ===== MOBILE RESPONSIVE ===== */
+    @media (max-width: 768px) {
+        /* Headers */
+        .main-header {
+            font-size: 2rem !important;
+            padding: 1rem 0.5rem !important;
+        }
+        
+        .sub-header {
+            font-size: 1.2rem !important;
+        }
+        
+        /* Buttons */
+        .stButton>button {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Cards */
+        .book-card {
+            padding: 1rem !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        .stat-card {
+            padding: 1rem !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        /* Input Fields */
+        .stTextInput>div>div>input {
+            padding: 0.5rem !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Metrics */
+        .stMetric {
+            padding: 0.5rem !important;
+        }
+        
+        /* Columns - Stack on mobile */
+        .row-widget.stHorizontal {
+            flex-direction: column !important;
+        }
+        
+        /* Expander */
+        .streamlit-expanderHeader {
+            font-size: 0.9rem !important;
+            padding: 0.5rem !important;
+        }
+        
+        /* Tabs */
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Sidebar */
+        .css-1d391kg {
+            padding: 1rem 0.5rem !important;
+        }
+        
+        /* Container spacing */
+        .element-container {
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* Radio buttons */
+        .stRadio > div {
+            flex-direction: column !important;
+        }
+        
+        /* Success/Error boxes */
+        .success-box, .error-box, .info-box, .warning-box {
+            padding: 1rem !important;
+            font-size: 0.9rem !important;
+        }
+    }
+    
+    /* Small Mobile (< 480px) */
+    @media (max-width: 480px) {
+        .main-header {
+            font-size: 1.5rem !important;
+        }
+        
+        .sub-header {
+            font-size: 1rem !important;
+        }
+        
+        .stButton>button {
+            padding: 0.4rem 0.8rem !important;
+            font-size: 0.85rem !important;
+        }
+        
+        /* Hide some decorative elements on very small screens */
+        .book-card:hover {
+            transform: none !important;
+        }
+    }
+    
+    /* Tablet (768px - 1024px) */
+    @media (min-width: 768px) and (max-width: 1024px) {
+        .main-header {
+            font-size: 2.5rem !important;
+        }
+        
+        .sub-header {
+            font-size: 1.5rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -533,34 +644,34 @@ def show_books_page():
             status_text = "Not Available"
             status_icon = "❌"
         
-        # Create card with gradient border
+        # Create mobile-responsive card
         st.markdown(f"""
             <div style='background: white; padding: 1.5rem; border-radius: 15px; 
                         margin: 1rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                         border-left: 5px solid {status_color};
                         transition: transform 0.3s ease;'>
-                <div style='display: flex; justify-content: space-between; align-items: center;'>
-                    <div style='flex: 1;'>
-                        <h3 style='color: #6C0345; margin: 0 0 0.5rem 0;'>📖 {book['title']}</h3>
-                        <p style='color: #6c757d; margin: 0 0 0.5rem 0;'>✍️ by {book['author']}</p>
-                        <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>🆔 {book['id']}</p>
+                <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+                    <div style='flex: 1; min-width: 200px;'>
+                        <h3 style='color: #6C0345; margin: 0 0 0.5rem 0; font-size: clamp(1rem, 2vw, 1.5rem);'>📖 {book['title']}</h3>
+                        <p style='color: #6c757d; margin: 0 0 0.5rem 0; font-size: clamp(0.85rem, 1.5vw, 1rem);'>✍️ by {book['author']}</p>
+                        <p style='color: #6c757d; margin: 0; font-size: clamp(0.75rem, 1.2vw, 0.9rem);'>🆔 {book['id']}</p>
                     </div>
-                    <div style='text-align: center; padding: 0 2rem;'>
+                    <div style='text-align: center; padding: 0 1rem; min-width: 120px;'>
                         <div style='background: {status_color}; color: white; padding: 0.5rem 1rem; 
-                                    border-radius: 10px; font-weight: 600;'>
+                                    border-radius: 10px; font-weight: 600; font-size: clamp(0.8rem, 1.5vw, 1rem);'>
                             {status_icon} {status_text}
                         </div>
-                        <p style='margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: 600; color: #6C0345;'>
+                        <p style='margin: 0.5rem 0 0 0; font-size: clamp(1rem, 2vw, 1.2rem); font-weight: 600; color: #6C0345;'>
                             {book['available']}/{book['copies']}
                         </p>
-                        <p style='margin: 0; font-size: 0.8rem; color: #6c757d;'>Available/Total</p>
+                        <p style='margin: 0; font-size: clamp(0.7rem, 1.2vw, 0.8rem); color: #6c757d;'>Available/Total</p>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        # Action buttons
-        col1, col2, col3, col4 = st.columns([2, 2, 2, 6])
+        # Action buttons - responsive layout
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             if st.button(f"📥 Borrow", key=f"borrow_{book['id']}", use_container_width=True):
@@ -758,9 +869,9 @@ def admin_dashboard():
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-                <h3 style='color: white; margin: 0; font-size: 2.5rem;'>{total_users}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.9;'>👥 Total Users</p>
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
+                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{total_users}</h3>
+                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>👥 Total Users</p>
             </div>
         """, unsafe_allow_html=True)
     
@@ -768,9 +879,9 @@ def admin_dashboard():
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
                         padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-                <h3 style='color: white; margin: 0; font-size: 2.5rem;'>{total_books}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.9;'>📚 Total Books</p>
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
+                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{total_books}</h3>
+                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>📚 Total Books</p>
             </div>
         """, unsafe_allow_html=True)
     
@@ -778,9 +889,9 @@ def admin_dashboard():
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
                         padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-                <h3 style='color: white; margin: 0; font-size: 2.5rem;'>{active_borrows}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.9;'>📖 Active Borrows</p>
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
+                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>{active_borrows}</h3>
+                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>📖 Active Borrows</p>
             </div>
         """, unsafe_allow_html=True)
     
@@ -788,9 +899,9 @@ def admin_dashboard():
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
                         padding: 1.5rem; border-radius: 15px; text-align: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-                <h3 style='color: white; margin: 0; font-size: 2.5rem;'>₹{total_fines}</h3>
-                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.9;'>💰 Total Fines</p>
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem;'>
+                <h3 style='color: white; margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);'>₹{total_fines}</h3>
+                <p style='color: white; margin: 0.5rem 0 0 0; font-size: clamp(0.8rem, 1.5vw, 1rem); opacity: 0.9;'>💰 Total Fines</p>
             </div>
         """, unsafe_allow_html=True)
     
