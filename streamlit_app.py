@@ -1,8 +1,17 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import os
 from datetime import datetime, timedelta
 import re
+import html
+import smtplib
+import ssl
+from email.message import EmailMessage
+
+from admin_portal import admin_dashboard, admin_login_page
+from program_catalog import PROGRAM_CATEGORIES, all_programmes, programme_category
+from security_utils import ensure_password_fields, hash_password, verify_password
 
 # Page config
 st.set_page_config(
@@ -21,6 +30,31 @@ st.markdown("""
         color: #ffffff;
     }
     
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main .block-container {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main .block-container > *:first-child {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
     /* Global text color */
     .stMarkdown, .stText, p, span, div {
         color: #e0e0e0 !important;
@@ -406,9 +440,896 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+DEFAULT_CATEGORY_BOOKS = {
+    "Artificial Intelligence": [
+        {
+            "id": "AI001",
+            "title": "Machine Learning Yearning",
+            "author": "Andrew Ng",
+            "copies": 6,
+            "pdf_url": "https://assets.anaconda.com/production/uploads/Machine-Learning-Yearning-Andrew-Ng.pdf",
+        },
+        {
+            "id": "AI002",
+            "title": "CS229 Lecture Notes",
+            "author": "Stanford University",
+            "copies": 5,
+            "pdf_url": "https://cs229.stanford.edu/main_notes.pdf",
+        },
+        {
+            "id": "AI003",
+            "title": "Reinforcement Learning: An Introduction",
+            "author": "Richard S. Sutton & Andrew G. Barto",
+            "copies": 4,
+            "pdf_url": "http://incompleteideas.net/book/RLbook2020.pdf",
+        },
+        {
+            "id": "AI004",
+            "title": "Dive into Deep Learning",
+            "author": "Aston Zhang et al.",
+            "copies": 5,
+            "pdf_url": "https://d2l.ai/d2l-en.pdf",
+        },
+        {
+            "id": "AI005",
+            "title": "Understanding Machine Learning",
+            "author": "Shai Shalev-Shwartz & Shai Ben-David",
+            "copies": 4,
+            "pdf_url": "https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf",
+        },
+        {
+            "id": "AI006",
+            "title": "Bayesian Reasoning and Machine Learning",
+            "author": "David Barber",
+            "copies": 4,
+            "pdf_url": "http://web4.cs.ucl.ac.uk/staff/D.Barber/textbook/031013.pdf",
+        },
+    ],
+    "Engineering": [
+        {
+            "id": "ENG001",
+            "title": "Engineering Mechanics: Statics",
+            "author": "OpenStax",
+            "copies": 5,
+            "pdf_url": "https://openstax.org/resources/engineering-mechanics-statics.pdf",
+        },
+        {
+            "id": "ENG002",
+            "title": "Engineering Mechanics: Dynamics",
+            "author": "OpenStax",
+            "copies": 5,
+            "pdf_url": "https://openstax.org/resources/engineering-mechanics-dynamics.pdf",
+        },
+        {
+            "id": "ENG003",
+            "title": "University Physics Volume 1",
+            "author": "Samuel J. Ling et al.",
+            "copies": 6,
+            "pdf_url": "https://openstax.org/resources/university-physics-volume-1.pdf",
+        },
+        {
+            "id": "ENG004",
+            "title": "University Physics Volume 2",
+            "author": "Samuel J. Ling et al.",
+            "copies": 6,
+            "pdf_url": "https://openstax.org/resources/university-physics-volume-2.pdf",
+        },
+        {
+            "id": "ENG005",
+            "title": "University Physics Volume 3",
+            "author": "Samuel J. Ling et al.",
+            "copies": 6,
+            "pdf_url": "https://openstax.org/resources/university-physics-volume-3.pdf",
+        },
+        {
+            "id": "ENG006",
+            "title": "Calculus Volume 2",
+            "author": "Gilbert Strang & Edwin 'Jed' Herman",
+            "copies": 5,
+            "pdf_url": "https://openstax.org/resources/calculus-volume-2.pdf",
+        },
+    ],
+    "Liberal Arts": [
+        {
+            "id": "ART001",
+            "title": "The Republic",
+            "author": "Plato",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/1497/1497-pdf.pdf",
+        },
+        {
+            "id": "ART002",
+            "title": "Pride and Prejudice",
+            "author": "Jane Austen",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/1342/1342-pdf.pdf",
+        },
+        {
+            "id": "ART003",
+            "title": "Meditations",
+            "author": "Marcus Aurelius",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/2680/2680-pdf.pdf",
+        },
+        {
+            "id": "ART004",
+            "title": "The Souls of Black Folk",
+            "author": "W. E. B. Du Bois",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/408/408-pdf.pdf",
+        },
+        {
+            "id": "ART005",
+            "title": "Utopia",
+            "author": "Thomas More",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/2130/2130-pdf.pdf",
+        },
+        {
+            "id": "ART006",
+            "title": "The Communist Manifesto",
+            "author": "Karl Marx & Friedrich Engels",
+            "copies": 3,
+            "pdf_url": "https://www.gutenberg.org/files/61/61-pdf.pdf",
+        },
+    ],
+    "Design": [
+        {
+            "id": "DES001",
+            "title": "Graphic Design and Print Production Fundamentals",
+            "author": "BCcampus OpenEd",
+            "copies": 4,
+            "pdf_url": "https://opentextbc.ca/graphicdesign/wp-content/uploads/sites/153/2014/10/Graphic-Design-and-Print-Production-Fundamentals-1534799288.pdf",
+        },
+        {
+            "id": "DES002",
+            "title": "Design Thinking (2nd Edition)",
+            "author": "Open School BC",
+            "copies": 4,
+            "pdf_url": "https://opentextbc.ca/designthinking/wp-content/uploads/sites/435/2022/05/Design-Thinking-2nd-Edition-1652302589.pdf",
+        },
+        {
+            "id": "DES003",
+            "title": "Apple Human Interface Guidelines",
+            "author": "Apple Inc.",
+            "copies": 4,
+            "pdf_url": "https://developer.apple.com/design/human-interface-guidelines/downloads/Apple-Human-Interface-Guidelines.pdf",
+        },
+        {
+            "id": "DES004",
+            "title": "Material Design Guidelines",
+            "author": "Google LLC",
+            "copies": 4,
+            "pdf_url": "https://storage.googleapis.com/spec-host/mio-material-cms/prod/7a5cbe3a9ec264e0404664cc645c9e6c.pdf",
+        },
+        {
+            "id": "DES005",
+            "title": "Universal Design New York",
+            "author": "NYC Department of Design & Construction",
+            "copies": 4,
+            "pdf_url": "https://www1.nyc.gov/assets/ddc/downloads/publications/design/ddcdd/universal.pdf",
+        },
+        {
+            "id": "DES006",
+            "title": "WCAG 2.1 Quick Reference",
+            "author": "W3C Web Accessibility Initiative",
+            "copies": 4,
+            "pdf_url": "https://www.w3.org/WAI/WCAG21/quickref/wcag2.1.pdf",
+        },
+    ],
+    "Management": [
+        {
+            "id": "MGT001",
+            "title": "Principles of Management (3e)",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/principles-of-management-3e.pdf",
+        },
+        {
+            "id": "MGT002",
+            "title": "Organizational Behavior (3e)",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/organizational-behavior-3e.pdf",
+        },
+        {
+            "id": "MGT003",
+            "title": "Principles of Marketing (3e)",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/principles-of-marketing-3e.pdf",
+        },
+        {
+            "id": "MGT004",
+            "title": "Business Ethics (2e)",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/business-ethics-2e.pdf",
+        },
+        {
+            "id": "MGT005",
+            "title": "Entrepreneurship",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/entrepreneurship.pdf",
+        },
+        {
+            "id": "MGT006",
+            "title": "Accounting Principles",
+            "author": "OpenStax",
+            "copies": 4,
+            "pdf_url": "https://openstax.org/resources/accounting-principles.pdf",
+        },
+    ],
+    "Media": [
+        {
+            "id": "MED001",
+            "title": "Understanding Media and Culture",
+            "author": "University of Minnesota Libraries",
+            "copies": 3,
+            "pdf_url": "https://open.lib.umn.edu/understandingmediaandculture/wp-content/uploads/sites/7/2016/05/Understanding-Media-and-Culture-1543285821.pdf",
+        },
+        {
+            "id": "MED002",
+            "title": "Media Studies 101",
+            "author": "University of People Press",
+            "copies": 3,
+            "pdf_url": "https://opentextbc.ca/mediastudies101/wp-content/uploads/sites/142/2015/06/Media-Studies-101.pdf",
+        },
+        {
+            "id": "MED003",
+            "title": "Public Relations",
+            "author": "University of Minnesota Libraries",
+            "copies": 3,
+            "pdf_url": "https://open.lib.umn.edu/publicrelations/wp-content/uploads/sites/24/2018/10/Public-Relations-1538065239.pdf",
+        },
+        {
+            "id": "MED004",
+            "title": "Writing for Strategic Communication Industries",
+            "author": "Heidi Everett",
+            "copies": 3,
+            "pdf_url": "https://open.lib.umn.edu/writingforscmedia/wp-content/uploads/sites/14/2018/10/Writing-for-Strategic-Communication-Industries-1538065247.pdf",
+        },
+        {
+            "id": "MED005",
+            "title": "Digital Marketing",
+            "author": "BCcampus OpenEd",
+            "copies": 3,
+            "pdf_url": "https://opentextbc.ca/digitalmarketing/wp-content/uploads/sites/201/2019/01/Digital-Marketing-1539290539.pdf",
+        },
+        {
+            "id": "MED006",
+            "title": "Communication in the Real World",
+            "author": "University of Minnesota Libraries",
+            "copies": 3,
+            "pdf_url": "https://open.lib.umn.edu/communicationinhealthcare/wp-content/uploads/sites/389/2020/08/Communication-in-the-Real-World-An-Introduction-to-Communication-Studies-1598372555.pdf",
+        },
+    ],
+    "Law": [
+        {
+            "id": "LAW001",
+            "title": "Constitution of India (Bare Act)",
+            "author": "Government of India",
+            "copies": 4,
+            "pdf_url": "https://legislative.gov.in/sites/default/files/COI_ENG.pdf",
+        },
+        {
+            "id": "LAW002",
+            "title": "Code of Criminal Procedure, 1973",
+            "author": "Government of India",
+            "copies": 4,
+            "pdf_url": "https://legislative.gov.in/sites/default/files/A1974-02.pdf",
+        },
+        {
+            "id": "LAW003",
+            "title": "Code of Civil Procedure, 1908",
+            "author": "Government of India",
+            "copies": 4,
+            "pdf_url": "https://legislative.gov.in/sites/default/files/A1908-05.pdf",
+        },
+        {
+            "id": "LAW004",
+            "title": "Indian Evidence Act, 1872",
+            "author": "Government of India",
+            "copies": 4,
+            "pdf_url": "https://legislative.gov.in/sites/default/files/A1872-01.pdf",
+        },
+        {
+            "id": "LAW005",
+            "title": "Indian Contract Act, 1872",
+            "author": "Government of India",
+            "copies": 4,
+            "pdf_url": "https://legislative.gov.in/sites/default/files/A1872-09.pdf",
+        },
+        {
+            "id": "LAW006",
+            "title": "Legal Research Methodology",
+            "author": "Institute of Company Secretaries of India",
+            "copies": 4,
+            "pdf_url": "https://www.icsi.edu/media/webmodules/publications/Legal_Research_Methodology.pdf",
+        },
+    ],
+}
+
+GENERAL_LIBRARY_BOOKS = [
+    {
+        "id": "GEN001",
+        "title": "Pride and Prejudice",
+        "author": "Jane Austen",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/1342/1342-pdf.pdf",
+    },
+    {
+        "id": "GEN002",
+        "title": "Crime and Punishment",
+        "author": "Fyodor Dostoevsky",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/2554/2554-pdf.pdf",
+    },
+    {
+        "id": "GEN003",
+        "title": "War and Peace",
+        "author": "Leo Tolstoy",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/2600/2600-pdf.pdf",
+    },
+    {
+        "id": "GEN004",
+        "title": "A Tale of Two Cities",
+        "author": "Charles Dickens",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/98/98-pdf.pdf",
+    },
+    {
+        "id": "GEN005",
+        "title": "Frankenstein",
+        "author": "Mary Shelley",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/84/84-pdf.pdf",
+    },
+    {
+        "id": "GEN006",
+        "title": "The Adventures of Sherlock Holmes",
+        "author": "Arthur Conan Doyle",
+        "copies": 4,
+        "pdf_url": "https://www.gutenberg.org/files/1661/1661-pdf.pdf",
+    },
+]
+
+
+COLLECTION_DEFAULTS = {
+    "Encyclopaedia": [
+        {
+            "id": "ENC001",
+            "title": "Encyclopaedia Britannica – Science & Technology",
+            "author": "Britannica Group",
+            "format": "Reference",
+            "copies": 3,
+            "borrowable": True,
+            "pdf_url": "https://www.britannica.com/summary/science-summary.pdf",
+        },
+        {
+            "id": "ENC002",
+            "title": "World Book Encyclopaedia – Human Geography",
+            "author": "World Book, Inc.",
+            "format": "Reference",
+            "copies": 2,
+            "borrowable": True,
+            "pdf_url": "https://static.worldbook.com/reference/human-geography.pdf",
+        },
+        {
+            "id": "ENC003",
+            "title": "Oxford Encyclopaedia of World History",
+            "author": "Oxford University Press",
+            "format": "Reference",
+            "copies": 2,
+            "borrowable": True,
+            "pdf_url": "https://global.oup.com/example/world-history-encyclopedia.pdf",
+        },
+    ],
+    "Catalogues": [
+        {
+            "id": "CAT001",
+            "title": "IKEA Furniture Catalogue 2025",
+            "author": "IKEA Communications",
+            "format": "Digital Catalogue",
+            "borrowable": False,
+            "issue_date": "2025",
+            "pdf_url": "https://catalogue.ikea.com/2025/ikea-catalogue-2025.pdf",
+        },
+        {
+            "id": "CAT002",
+            "title": "Apple Product Lineup Guide",
+            "author": "Apple Inc.",
+            "format": "Product Catalogue",
+            "borrowable": False,
+            "issue_date": "Fall 2025",
+            "pdf_url": "https://www.apple.com/newsroom/pdfs/product-guide-fall-2025.pdf",
+        },
+    ],
+    "Magazines": [
+        {
+            "id": "MAG001",
+            "title": "National Geographic – November 2025",
+            "author": "National Geographic Society",
+            "format": "Monthly Magazine",
+            "borrowable": False,
+            "issue_date": "November 2025",
+            "pdf_url": "https://www.nationalgeographic.com/magazine/2025/11/national-geographic-november-2025.pdf",
+        },
+        {
+            "id": "MAG002",
+            "title": "Scientific American – AI Special",
+            "author": "Springer Nature",
+            "format": "Monthly Magazine",
+            "borrowable": False,
+            "issue_date": "October 2025",
+            "pdf_url": "https://www.scientificamerican.com/media/pdf/ai-special-issue-2025.pdf",
+        },
+    ],
+    "Fiction": [
+        {
+            "id": "FIC001",
+            "title": "The Great Gatsby",
+            "author": "F. Scott Fitzgerald",
+            "format": "Novel",
+            "copies": 4,
+            "borrowable": True,
+            "pdf_url": "https://www.gutenberg.org/cache/epub/64317/pg64317-images.html",
+        },
+        {
+            "id": "FIC002",
+            "title": "To Kill a Mockingbird",
+            "author": "Harper Lee",
+            "format": "Novel",
+            "copies": 4,
+            "borrowable": True,
+            "pdf_url": "https://raw.githubusercontent.com/benoitvallon/100-best-books/master/the-great-gatsby.pdf",
+        },
+    ],
+    "Sci-Fi": [
+        {
+            "id": "SCI001",
+            "title": "Dune",
+            "author": "Frank Herbert",
+            "format": "Science Fiction",
+            "copies": 3,
+            "borrowable": True,
+            "pdf_url": "https://archive.org/download/dune-frank-herbert/Dune%20-%20Frank%20Herbert.pdf",
+        },
+        {
+            "id": "SCI002",
+            "title": "The Time Machine",
+            "author": "H. G. Wells",
+            "format": "Science Fiction",
+            "copies": 3,
+            "borrowable": True,
+            "pdf_url": "https://www.gutenberg.org/files/35/35-pdf.pdf",
+        },
+    ],
+    "Course Books": [
+        {
+            "id": "CRS001",
+            "title": "Discrete Mathematics (3e)",
+            "author": "OpenStax",
+            "format": "Course Textbook",
+            "copies": 6,
+            "borrowable": True,
+            "pdf_url": "https://openstax.org/resources/discrete-mathematics-3e.pdf",
+        },
+        {
+            "id": "CRS002",
+            "title": "Introduction to Psychology",
+            "author": "OpenStax",
+            "format": "Course Textbook",
+            "copies": 6,
+            "borrowable": True,
+            "pdf_url": "https://openstax.org/resources/psychology-3e.pdf",
+        },
+    ],
+    "Newspapers": [
+        {
+            "id": "NEWS001",
+            "title": "The Guardian – Morning Edition",
+            "author": "Guardian News & Media",
+            "format": "Daily Newspaper",
+            "borrowable": False,
+            "issue_date": "12 Nov 2025",
+            "pdf_url": "https://static.guim.co.uk/2025/11/12/TheGuardian-MorningEdition.pdf",
+        },
+        {
+            "id": "NEWS002",
+            "title": "The New York Times – International",
+            "author": "The New York Times Company",
+            "format": "Daily Newspaper",
+            "borrowable": False,
+            "issue_date": "12 Nov 2025",
+            "pdf_url": "https://static.nytimes.com/2025/11/12/international-print.pdf",
+        },
+    ],
+}
+
+
+def _slugify_program(programme: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", programme.upper())[:8] or "GEN"
+
+
+def _build_unique_program_title(
+    base_title: str | None,
+    programme: str,
+    slug: str,
+    signature_base: str,
+) -> str:
+    """Ensure programme-specific titles stay readable and distinct."""
+
+    title = base_title.strip() if isinstance(base_title, str) else ""
+    programme_label = re.sub(r"\s+", " ", programme).strip() if isinstance(programme, str) else slug
+
+    if title:
+        # Avoid duplicating programme info if already present.
+        if programme_label and programme_label.lower() in title.lower():
+            return title
+        return f"{title} ({programme_label})" if programme_label else title
+
+    programme_label = programme_label or slug or "Programme"
+    return f"{programme_label} Resource {signature_base}"
+
+
+def _make_program_book_entry(template: dict, programme: str, category: str, slug: str | None = None) -> dict:
+    slug = slug or _slugify_program(programme)
+    entry = template.copy()
+    base_id = entry['id']
+    entry['id'] = f"{base_id}_{slug}"
+    signature_base = re.sub(r"[^A-Z0-9]", "", base_id.upper()) or base_id.upper()
+    base_title = entry.get('title') if isinstance(entry.get('title'), str) else None
+    entry['original_title'] = base_title
+    entry['title'] = _build_unique_program_title(base_title, programme, slug, signature_base)
+    entry['title_signature'] = f"{slug}:{signature_base}"
+    copies = max(int(entry.get('copies', 1)), 1)
+    entry['copies'] = copies
+    entry['available'] = copies
+    entry['programme'] = programme
+    entry['program_category'] = category
+    entry['catalog_type'] = 'program'
+    pdf_url = entry.get('pdf_url')
+    if isinstance(pdf_url, str) and pdf_url.strip():
+        clean_url = pdf_url.strip()
+        delimiter = '&' if '?' in clean_url else '?'
+        entry['pdf_url'] = f"{clean_url}{delimiter}programme={slug}"
+    else:
+        entry.pop('pdf_url', None)
+    return entry
+
+
+def build_default_program_books():
+    program_books = {}
+    for category, programmes in PROGRAM_CATEGORIES.items():
+        templates = DEFAULT_CATEGORY_BOOKS.get(category, [])
+        for programme in programmes:
+            slug = _slugify_program(programme)
+            program_books[programme] = [
+                _make_program_book_entry(template, programme, category, slug)
+                for template in templates
+            ]
+    return program_books
+
+
+def programme_books(programme: str) -> list[dict]:
+    return st.session_state.app.books.get('program_books', {}).get(programme, [])
+
+
+def get_latest_programme_books(programme: str, limit: int = 5) -> list[dict]:
+    books = programme_books(programme)
+    if not books:
+        return []
+    sorted_books = sorted(
+        books,
+        key=lambda b: b.get('added_at') or b.get('title_signature', ''),
+        reverse=True,
+    )
+    return sorted_books[:limit]
+
+
+def build_collection_catalog() -> dict[str, list[dict]]:
+    catalog: dict[str, list[dict]] = {}
+    for name, entries in COLLECTION_DEFAULTS.items():
+        prepared: list[dict] = []
+        for template in entries:
+            item = dict(template)
+            borrowable = bool(item.get('borrowable', False))
+            copies = int(item.get('copies', 0) or (1 if borrowable else 0))
+            item['borrowable'] = borrowable
+            item['copies'] = max(copies, 0)
+            item['available'] = item['copies']
+            item['catalog_type'] = 'collection'
+            item['collection'] = name
+            issue_date = item.get('issue_date')
+            if isinstance(issue_date, str):
+                item['issue_date'] = issue_date.strip()
+            pdf_url = item.get('pdf_url')
+            if isinstance(pdf_url, str):
+                item['pdf_url'] = pdf_url.strip()
+            else:
+                item.pop('pdf_url', None)
+            prepared.append(item)
+        catalog[name] = prepared
+    return catalog
+
+
+def collection_catalog() -> dict[str, list[dict]]:
+    return st.session_state.app.books.get('collection_catalog', {})
+
+
+def collection_items(name: str) -> list[dict]:
+    return collection_catalog().get(name, [])
+
+
+def borrowable_collection_items() -> list[dict]:
+    items = []
+    for collection, entries in collection_catalog().items():
+        for entry in entries:
+            if entry.get('borrowable'):
+                items.append(entry)
+    return items
+
+
+def _email_setting(name: str) -> str | None:
+    value = os.getenv(name)
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def send_reservation_email(
+    to_email: str,
+    user_name: str,
+    book: dict,
+    reservation: dict,
+) -> tuple[bool, str | None]:
+    smtp_server = _email_setting("BOOKFLOW_SMTP_SERVER")
+    smtp_port = _email_setting("BOOKFLOW_SMTP_PORT") or "465"
+    smtp_username = _email_setting("BOOKFLOW_SMTP_USERNAME")
+    smtp_password = _email_setting("BOOKFLOW_SMTP_PASSWORD")
+    sender_email = _email_setting("BOOKFLOW_EMAIL_SENDER") or smtp_username
+
+    if not all([smtp_server, smtp_username, smtp_password, sender_email]):
+        return False, (
+            "SMTP settings are incomplete. Set BOOKFLOW_SMTP_SERVER, BOOKFLOW_SMTP_PORT, "
+            "BOOKFLOW_SMTP_USERNAME, BOOKFLOW_SMTP_PASSWORD, and BOOKFLOW_EMAIL_SENDER."
+        )
+
+    try:
+        port = int(smtp_port)
+    except ValueError:
+        return False, f"Invalid SMTP port: {smtp_port}"
+
+    book_title = book.get('title', 'Requested Book')
+    programme = book.get('programme') or 'General Library'
+    subject = f"Reservation confirmed for \"{book_title}\""
+    reserved_at = reservation.get('reserved_at', datetime.now().strftime('%Y-%m-%d %H:%M'))
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = sender_email
+    message["To"] = to_email
+    message.set_content(
+        f"Hello {user_name},\n\n"
+        f"We've recorded your reservation for \"{book_title}\" in the BookFlow library.\n\n"
+        f"Reservation details:\n"
+        f"• Programme: {programme}\n"
+        f"• Reservation ID: {reservation.get('id')}\n"
+        f"• Reserved on: {reserved_at}\n\n"
+        "We'll notify you as soon as a copy becomes available.\n\n"
+        "Thank you for using BookFlow!"
+    )
+
+    try:
+        context = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+                server.login(smtp_username, smtp_password)
+                server.send_message(message)
+        else:
+            with smtplib.SMTP(smtp_server, port, timeout=20) as server:
+                server.ehlo()
+                server.starttls(context=context)
+                server.ehlo()
+                server.login(smtp_username, smtp_password)
+                server.send_message(message)
+        return True, None
+    except smtplib.SMTPAuthenticationError as exc:
+        detail = None
+        if getattr(exc, "smtp_error", None):
+            try:
+                detail = exc.smtp_error.decode("utf-8", errors="ignore")
+            except AttributeError:
+                detail = str(exc.smtp_error)
+        return False, (
+            f"Authentication failed: {detail.strip()}" if detail else "Authentication failed: check username/app password."
+        )
+    except smtplib.SMTPConnectError as exc:
+        return False, f"Connection error: {exc.smtp_error.decode() if getattr(exc, 'smtp_error', None) else exc}"
+    except Exception as exc:  # pragma: no cover - depends on external SMTP
+        return False, str(exc)
+
+
+def _render_programme_carousel(programme: str, books: list[dict], slider_key: str) -> None:
+    if not books:
+        return
+
+    carousel_id = f"bf-carousel-{_slugify_program(programme)}"
+    interval_ms = 7000
+
+    slides_html: list[str] = []
+    indicators_html: list[str] = []
+
+    for idx, book in enumerate(books):
+        title = html.escape(book.get("title", "Untitled"))
+        author = html.escape(book.get("author", "Unknown"))
+        book_id = html.escape(book.get("id", ""))
+        copies = int(book.get("copies", 0) or 0)
+        available = int(book.get("available", 0) or 0)
+        pdf_url = (book.get("pdf_url") or "").strip()
+        pdf_html = (
+            f"<a class=\"bf-link\" href=\"{html.escape(pdf_url)}\" target=\"_blank\">📄 Download</a>"
+            if pdf_url
+            else ""
+        )
+
+        slides_html.append(
+            f"""
+            <li>
+                <div class=\"bf-slide-card\">
+                    <div class=\"bf-slide-header\">
+                        <span class=\"bf-slide-pill\">Slide {idx + 1} / {len(books)}</span>
+                        <span class=\"bf-slide-badge\">{available} / {copies} Available</span>
+                    </div>
+                    <h2 class=\"bf-slide-title\">{title}</h2>
+                    <p class=\"bf-slide-author\">✍️ {author}</p>
+                    <div class=\"bf-slide-meta\">
+                        <span>{'🆔 ' + book_id if book_id else ''}</span>
+                        <span>{pdf_html}</span>
+                    </div>
+                </div>
+            </li>
+            """
+        )
+
+        indicators_html.append(
+            f"<button type=\"button\" class=\"{'active' if idx == 0 else ''}\"></button>"
+        )
+
+    slides_markup = "\n".join(slides_html)
+    indicators_markup = "\n".join(indicators_html)
+    heading = html.escape(programme)
+
+    components.html(
+        f"""
+        <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swiffy-slider@1.6.0/dist/css/swiffy-slider.min.css\" integrity=\"sha384-wy4mQyqX4qsutPOgo5sLiCFYl8aAkaI0s5momkGLumZ5qX6Ch12yvDqOiiMHDL/4\" crossorigin=\"anonymous\">
+        <script src=\"https://cdn.jsdelivr.net/npm/swiffy-slider@1.6.0/dist/js/swiffy-slider.min.js\" integrity=\"sha384-G1IanFkFJxuxMxDPZWS9Vyuk3F7S3w7Dnk3a1JpNggCBvs1+qsSVqS+8CA0nVddO\" crossorigin=\"anonymous\" defer></script>
+        <style>
+            #{carousel_id} .bf-slider-shell {{
+                background: linear-gradient(135deg, #4facfe 0%, #6C0345 100%);
+                border-radius: 14px;
+                padding: 1.2rem 1.4rem;
+                margin-top: 0.5rem;
+                box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+                color: #fff;
+                font-family: 'Segoe UI', sans-serif;
+            }}
+            #{carousel_id} .bf-slider-shell h3 {{
+                margin: 0.4rem 0 0 0;
+                font-size: 1.4rem;
+            }}
+            #{carousel_id} .bf-slide-card {{
+                background: rgba(17,17,17,0.85);
+                backdrop-filter: blur(4px);
+                border-radius: 12px;
+                padding: 1.5rem;
+                min-height: 160px;
+                display: flex;
+                flex-direction: column;
+                gap: 0.9rem;
+                box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+            }}
+            #{carousel_id} .bf-slide-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0.6rem;
+                font-size: 0.78rem;
+                letter-spacing: 0.05em;
+            }}
+            #{carousel_id} .bf-slide-pill {{
+                background: rgba(255,255,255,0.12);
+                padding: 0.25rem 0.65rem;
+                border-radius: 999px;
+            }}
+            #{carousel_id} .bf-slide-badge {{
+                background: rgba(40,167,69,0.2);
+                color: #87ffb3;
+                padding: 0.25rem 0.65rem;
+                border-radius: 999px;
+                font-weight: 600;
+            }}
+            #{carousel_id} .bf-slide-title {{
+                margin: 0;
+                font-size: 1.5rem;
+            }}
+            #{carousel_id} .bf-slide-author {{
+                margin: 0;
+                font-size: 0.95rem;
+                color: rgba(255,255,255,0.78);
+            }}
+            #{carousel_id} .bf-slide-meta {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.8rem;
+                font-size: 0.82rem;
+                color: rgba(255,255,255,0.68);
+            }}
+            #{carousel_id} .bf-link {{
+                color: #ffe066;
+                text-decoration: none;
+                font-weight: 600;
+            }}
+            #{carousel_id} .slider-nav::before {{
+                background: rgba(0,0,0,0.4);
+                border-radius: 50%;
+            }}
+            #{carousel_id} .slider-indicators button {{
+                background: rgba(255,255,255,0.35);
+                width: 10px;
+                height: 10px;
+                margin: 0 4px;
+            }}
+            #{carousel_id} .slider-indicators button.active {{
+                background: #ffe066;
+            }}
+        </style>
+        <div id=\"{carousel_id}\">
+            <div class=\"bf-slider-shell\">
+                <p style=\"margin:0; opacity:0.85; font-size:0.72rem; letter-spacing:0.12em;\">LATEST FOR YOUR PROGRAMME</p>
+                <h3>🔥 Fresh Picks for {heading}</h3>
+                <div class=\"swiffy-slider\" data-slider-nav-autoplay data-slider-nav-autoplay-interval=\"{interval_ms}\" data-slider-nav-autopause=\"hover\" data-slider-nav-animation=\"slide\">
+                    <ul class=\"slider-container\">
+                        {slides_markup}
+                    </ul>
+                    <button type=\"button\" class=\"slider-nav\"></button>
+                    <button type=\"button\" class=\"slider-nav slider-nav-next\"></button>
+                    <div class=\"slider-indicators\">
+                        {indicators_markup}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function() {{
+                const mount = document.getElementById('{carousel_id}');
+                const initSlider = () => {{
+                    if (window.swiffyslider && mount) {{
+                        window.swiffyslider.init(mount);
+                    }}
+                }};
+
+                if (document.readyState === 'loading') {{
+                    document.addEventListener('DOMContentLoaded', initSlider, {{ once: true }});
+                }} else {{
+                    initSlider();
+                }}
+
+                document.addEventListener('swiffy-slider:init', initSlider);
+            }})();
+        </script>
+        """,
+        height=360,
+        key=f"{carousel_id}_component",
+    )
+
+
 class BookFlowApp:
     def __init__(self):
         self.data_file = "bookflow_data.json"
+        self.reservations: list[dict] = []
         self.load_data()
     
     def load_data(self):
@@ -419,11 +1340,25 @@ class BookFlowApp:
                 self.users = data.get('users', self.get_default_users())
                 self.books = data.get('books', self.get_default_books())
                 self.transactions = data.get('transactions', [])
+                self.reservations = data.get('reservations', [])
                 self.migrate_user_contact_fields()
+                self.migrate_user_password_fields()
+                self.migrate_program_books()
+                self.migrate_user_program_fields()
+                self.seed_program_books()
+                self.seed_collection_catalog()
+                self.normalize_book_metadata()
         except FileNotFoundError:
             self.users = self.get_default_users()
             self.books = self.get_default_books()
             self.transactions = []
+            self.reservations = []
+            self.migrate_user_password_fields()
+            self.migrate_program_books()
+            self.migrate_user_program_fields()
+            self.seed_program_books()
+            self.seed_collection_catalog()
+            self.normalize_book_metadata()
             self.save_data()
     
     def migrate_user_contact_fields(self):
@@ -440,24 +1375,82 @@ class BookFlowApp:
                         updated = True
         if updated:
             self.save_data()
-    
+
+    def migrate_user_password_fields(self):
+        """Ensure all stored users have hashed passwords."""
+        updated = False
+        for role, users in self.users.items():
+            for user in users:
+                if ensure_password_fields(user):
+                    updated = True
+
+        if updated:
+            self.save_data()
+
     def save_data(self):
         """Save data to JSON file"""
         data = {
             'users': self.users,
             'books': self.books,
-            'transactions': self.transactions
+            'transactions': self.transactions,
+            'reservations': self.reservations,
         }
         with open(self.data_file, 'w') as f:
             json.dump(data, f, indent=4)
-    
+
+    def update_user_email(self, user_id: str, role: str, email: str | None) -> None:
+        role_key = (
+            'students'
+            if role == 'student'
+            else 'teachers'
+            if role == 'teacher'
+            else 'admin'
+        )
+        new_value = email.strip() if isinstance(email, str) and email.strip() else 'Not provided'
+        for user in self.users.get(role_key, []):
+            if user.get('id') == user_id:
+                user['email'] = new_value
+                break
+        self.save_data()
+
+    def get_active_reservation(self, user_id: str, book_id: str) -> dict | None:
+        for record in self.reservations:
+            if (
+                record.get('user_id') == user_id
+                and record.get('book_id') == book_id
+                and record.get('status', 'waiting') == 'waiting'
+            ):
+                return record
+        return None
+
+    def create_reservation(self, user: dict, book: dict) -> dict:
+        sequence = len(self.reservations) + 1
+        reservation_id = f"RSV{datetime.now().strftime('%Y%m%d%H%M%S')}{sequence:03d}"
+        reserved_at = datetime.now().strftime('%Y-%m-%d %H:%M')
+        record = {
+            'id': reservation_id,
+            'book_id': book['id'],
+            'book_title': book.get('title'),
+            'programme': book.get('programme'),
+            'user_id': user.get('id'),
+            'user_name': user.get('name'),
+            'user_email': user.get('email'),
+            'status': 'waiting',
+            'reserved_at': reserved_at,
+        }
+        self.reservations.append(record)
+        self.save_data()
+        return record
+
     def get_default_users(self):
-        return {
+        default_programme = all_programmes()[0] if all_programmes() else 'General Library'
+
+        defaults = {
             'students': [
                 {'id': 'E25CSEU1187', 'username': 'sairam', 'password': 'sairam123', 'name': 'Sairam R', 
-                 'contact': '+91 9876543210', 'email': 'sairam@example.com'},
+                 'contact': '+91 9876543210', 'email': 'sairam@example.com', 'programme': default_programme},
                 {'id': 'B24ECE0045', 'username': 'student2', 'password': 'student123', 'name': 'Student 2',
-                 'contact': '+91 9876543211', 'email': 'student2@example.com'}
+                 'contact': '+91 9876543211', 'email': 'student2@example.com', 'programme': default_programme}
             ],
             'teachers': [
                 {'id': 'T25CSED101', 'username': 'prof_bohra', 'password': 'teacher123', 'name': 'Prof Bohra',
@@ -465,52 +1458,303 @@ class BookFlowApp:
                 {'id': 'P24MATH205', 'username': 'prof_jd', 'password': 'teacher123', 'name': 'Prof JD',
                  'contact': '+91 9876543221', 'email': 'profjd@example.com'}
             ],
-            'admin': [
-                {'id': 'SHRUTI001', 'username': 'shruti', 'password': 'morningstar123', 'name': 'Administrator',
-                 'contact': 'Not provided', 'email': 'Not provided'}
-            ]
         }
+
+        admin_username = os.getenv('BOOKFLOW_ADMIN_USERNAME', 'admin')
+        admin_password = os.getenv('BOOKFLOW_ADMIN_PASSWORD', 'morningstar123')
+        admin_contact = os.getenv('BOOKFLOW_ADMIN_CONTACT', 'Not provided')
+        admin_email = os.getenv('BOOKFLOW_ADMIN_EMAIL', 'Not provided')
+
+        admin_hash, admin_salt = hash_password(admin_password)
+        defaults['admin'] = [{
+            'id': os.getenv('BOOKFLOW_ADMIN_ID', 'ADMIN001'),
+            'username': admin_username,
+            'password_hash': admin_hash,
+            'password_salt': admin_salt,
+            'name': os.getenv('BOOKFLOW_ADMIN_NAME', 'Administrator'),
+            'contact': admin_contact,
+            'email': admin_email
+        }]
+
+        for role_users in defaults.values():
+            for user in role_users:
+                if 'password' in user:
+                    password_hash, password_salt = hash_password(user['password'])
+                    user['password_hash'] = password_hash
+                    user['password_salt'] = password_salt
+                    user.pop('password', None)
+
+        return defaults
     
     def get_default_books(self):
+        teacher_books = [
+            {'id': 'T001', 'title': 'R.D. Sharma Mathematics', 'author': 'R.D. Sharma', 'copies': 5, 'available': 5, 'catalog_type': 'teacher'},
+            {'id': 'T002', 'title': 'NCERT Science', 'author': 'NCERT', 'copies': 10, 'available': 10, 'catalog_type': 'teacher'},
+            {'id': 'T003', 'title': 'Psychology of Prejudice', 'author': 'Various', 'copies': 2, 'available': 2, 'catalog_type': 'teacher'},
+        ]
+
         return {
-            'student_books': [
-                {'id': 'B001', 'title': 'Pride & Prejudice', 'author': 'Jane Austen', 'copies': 3, 'available': 3},
-                {'id': 'B002', 'title': 'Crime & Punishment', 'author': 'Dostoevsky', 'copies': 2, 'available': 2},
-                {'id': 'B003', 'title': 'One Hundred Years of Solitude', 'author': 'Gabriel García Márquez', 'copies': 2, 'available': 2},
-                {'id': 'B004', 'title': '1984', 'author': 'George Orwell', 'copies': 4, 'available': 4},
-                {'id': 'B005', 'title': 'The Hunger Games', 'author': 'Suzanne Collins', 'copies': 3, 'available': 3},
-            ],
-            'teacher_books': [
-                {'id': 'T001', 'title': 'R.D. Sharma Mathematics', 'author': 'R.D. Sharma', 'copies': 5, 'available': 5},
-                {'id': 'T002', 'title': 'NCERT Science', 'author': 'NCERT', 'copies': 10, 'available': 10},
-                {'id': 'T003', 'title': 'Psychology of Prejudice', 'author': 'Various', 'copies': 2, 'available': 2},
-            ]
+            'program_books': build_default_program_books(),
+            'teacher_books': teacher_books,
+            'collection_catalog': build_collection_catalog(),
         }
-    
+
+    def migrate_program_books(self):
+        """Ensure program-specific books structure exists."""
+        program_books = self.books.setdefault('program_books', {})
+
+        legacy_students = self.books.pop('student_books', [])
+        if legacy_students:
+            general = program_books.setdefault('General Library', [])
+            for book in legacy_students:
+                book.setdefault('copies', book.get('available', 1))
+                book.setdefault('available', book['copies'])
+                book['programme'] = 'General Library'
+                book['program_category'] = 'General'
+                book['catalog_type'] = 'program'
+                general.append(book)
+
+        for programme in all_programmes():
+            program_books.setdefault(programme, [])
+
+    def migrate_user_program_fields(self):
+        programmes = set(all_programmes())
+        if not programmes:
+            return
+
+        updated = False
+        default_programme = next(iter(programmes))
+        for user in self.users.get('students', []):
+            if user.get('programme') not in programmes:
+                user['programme'] = default_programme
+                updated = True
+
+        if updated:
+            self.save_data()
+
+    def seed_program_books(self):
+        program_books = self.books.setdefault('program_books', {})
+        defaults = build_default_program_books()
+        seeded = False
+
+        for programme, default_books in defaults.items():
+            existing = program_books.get(programme)
+            slug = _slugify_program(programme)
+            default_map = {book['id'].split('_')[0]: book for book in default_books}
+            if not existing:
+                program_books[programme] = [dict(book) for book in default_books]
+                seeded = True
+            else:
+                existing_map = {book['id'].split('_')[0]: book for book in existing}
+                needs_refresh = False
+                for book in existing:
+                    pdf_url = book.get('pdf_url')
+                    if isinstance(pdf_url, str):
+                        if 'programme=' not in pdf_url:
+                            needs_refresh = True
+                            break
+                    else:
+                        needs_refresh = True
+                        break
+                    title = book.get('title')
+                    if not isinstance(title, str) or programme not in title:
+                        needs_refresh = True
+                        break
+                if needs_refresh:
+                    program_books[programme] = [dict(book) for book in default_books]
+                    seeded = True
+                else:
+                    for base_id, template in default_map.items():
+                        existing_book = existing_map.get(base_id)
+                        if existing_book:
+                            if template.get('copies') and existing_book.get('copies', 0) < template['copies']:
+                                existing_book['copies'] = template['copies']
+                                existing_book['available'] = min(existing_book.get('available', template['copies']), template['copies'])
+                                seeded = True
+                            if template.get('pdf_url') and not existing_book.get('pdf_url'):
+                                existing_book['pdf_url'] = template['pdf_url']
+                                seeded = True
+                        else:
+                            new_entry = dict(template)
+                            new_entry['available'] = new_entry.get('copies', 1)
+                            existing.append(new_entry)
+                            seeded = True
+
+        # ensure general library defaults exist
+        general_books = program_books.setdefault('General Library', [])
+        if len(general_books) < len(GENERAL_LIBRARY_BOOKS):
+            existing_ids = {b['id'] for b in general_books}
+            for book in GENERAL_LIBRARY_BOOKS:
+                if book['id'] not in existing_ids:
+                    entry = dict(book)
+                    entry['available'] = entry.get('copies', 1)
+                    entry['programme'] = 'General Library'
+                    entry['program_category'] = 'General'
+                    entry['catalog_type'] = 'program'
+                    general_books.append(entry)
+                    seeded = True
+        else:
+            general_map = {book['id']: book for book in GENERAL_LIBRARY_BOOKS}
+            for book in general_books:
+                template = general_map.get(book['id'])
+                if not template:
+                    continue
+                if template.get('pdf_url') and not book.get('pdf_url'):
+                    book['pdf_url'] = template['pdf_url']
+                if template.get('copies') and book.get('copies', 0) < template['copies']:
+                    book['copies'] = template['copies']
+                    book['available'] = min(book.get('available', template['copies']), template['copies'])
+
+        if seeded:
+            self.save_data()
+
+    def seed_collection_catalog(self):
+        catalog = self.books.setdefault('collection_catalog', {})
+        defaults = build_collection_catalog()
+        updated = False
+
+        for name, default_items in defaults.items():
+            existing = catalog.get(name)
+            if not existing:
+                catalog[name] = [dict(item) for item in default_items]
+                updated = True
+                continue
+
+            existing_map = {item['id']: item for item in existing}
+            for template in default_items:
+                entry = existing_map.get(template['id'])
+                if entry:
+                    if entry.get('borrowable') != template['borrowable']:
+                        entry['borrowable'] = template['borrowable']
+                        updated = True
+                    entry['catalog_type'] = 'collection'
+                    entry['collection'] = name
+                    if template.get('format') and entry.get('format') != template['format']:
+                        entry['format'] = template['format']
+                        updated = True
+                    if template.get('issue_date') and entry.get('issue_date') != template['issue_date']:
+                        entry['issue_date'] = template['issue_date']
+                        updated = True
+                    copies = template['copies']
+                    if entry.get('copies') != copies:
+                        entry['copies'] = copies
+                        updated = True
+                    if template['borrowable']:
+                        available = min(entry.get('available', copies), copies)
+                    else:
+                        available = 0
+                    if entry.get('available') != available:
+                        entry['available'] = available
+                        updated = True
+                    if template.get('pdf_url'):
+                        if entry.get('pdf_url') != template['pdf_url']:
+                            entry['pdf_url'] = template['pdf_url']
+                            updated = True
+                    else:
+                        if entry.get('pdf_url'):
+                            entry.pop('pdf_url', None)
+                            updated = True
+                else:
+                    catalog[name].append(dict(template))
+                    updated = True
+
+        for name in catalog.keys():
+            for item in catalog[name]:
+                item['catalog_type'] = 'collection'
+                item['collection'] = name
+
+        if updated:
+            self.save_data()
+
+    def normalize_book_metadata(self):
+        program_books = self.books.get('program_books', {})
+        for programme, books in program_books.items():
+            category = programme_category(programme) or 'General'
+            for book in books:
+                book['catalog_type'] = 'program'
+                book['programme'] = programme
+                book['program_category'] = category
+                copies = max(int(book.get('copies', 1)), 1)
+                available = book.get('available', copies)
+                book['copies'] = copies
+                book['available'] = min(max(int(available), 0), copies)
+                pdf_url = book.get('pdf_url')
+                if isinstance(pdf_url, str):
+                    book['pdf_url'] = pdf_url.strip()
+                else:
+                    book.pop('pdf_url', None)
+                if book.get('copies') and book.get('copies', 0) < book.get('copies', 1):
+                    book['copies'] = book.get('copies', 1)
+                    book['available'] = min(book.get('available', book.get('copies', 1)), book.get('copies', 1))
+
+        catalog = self.books.setdefault('collection_catalog', {})
+        for name, items in catalog.items():
+            for item in items:
+                item['catalog_type'] = 'collection'
+                item['collection'] = name
+                borrowable = bool(item.get('borrowable', False))
+                item['borrowable'] = borrowable
+                copies = int(item.get('copies', 0))
+                if borrowable and copies <= 0:
+                    copies = 1
+                elif not borrowable:
+                    copies = 0
+                item['copies'] = copies
+                available = int(item.get('available', copies))
+                if borrowable:
+                    item['available'] = min(max(available, 0), copies)
+                else:
+                    item['available'] = 0
+                issue_date = item.get('issue_date')
+                if isinstance(issue_date, str):
+                    item['issue_date'] = issue_date.strip()
+                pdf_url = item.get('pdf_url')
+                if isinstance(pdf_url, str):
+                    item['pdf_url'] = pdf_url.strip()
+                else:
+                    item.pop('pdf_url', None)
+
+        for book in self.books.get('teacher_books', []):
+            book['catalog_type'] = 'teacher'
+            book.pop('programme', None)
+            copies = max(int(book.get('copies', 1)), 1)
+            available = book.get('available', copies)
+            book['copies'] = copies
+            book['available'] = min(max(int(available), 0), copies)
+
+    def get_program_books(self, programme: str) -> list[dict]:
+        return self.books.get('program_books', {}).get(programme, [])
+
+    def iter_program_books(self):
+        for programme, books in self.books.get('program_books', {}).items():
+            for book in books:
+                yield programme, book
+
     def verify_login(self, username, password, role):
         """Verify user credentials"""
         role_key = 'students' if role == 'student' else 'teachers' if role == 'teacher' else 'admin'
         users = self.users.get(role_key, [])
+
         
         for user in users:
-            if user['username'] == username and user['password'] == password:
+            if user['username'] == username and verify_password(password, user.get('password_hash'), user.get('password_salt')):
                 return user
         return None
 
 # Initialize app
 if 'app' not in st.session_state:
     st.session_state.app = BookFlowApp()
+elif not (
+    hasattr(st.session_state.app, 'get_active_reservation')
+    and hasattr(st.session_state.app, 'create_reservation')
+):
+    st.session_state.app = BookFlowApp()
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user = None
     st.session_state.role = None
-
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.user = None
-    st.session_state.role = None
-    st.rerun()
+    st.session_state.selected_program = None
 
 def login_page():
     """Display login page"""
@@ -562,6 +1806,9 @@ def login_page():
                         st.session_state.logged_in = True
                         st.session_state.user = user
                         st.session_state.role = role.lower()
+                        st.session_state.selected_program = (
+                            user.get('programme') if st.session_state.role == 'student' else None
+                        )
                         st.success(f"✅ Welcome back, {user['name']}!")
                         st.balloons()
                         st.rerun()
@@ -581,71 +1828,6 @@ def login_page():
         if st.button("🔒 Admin Access", key="admin_link", help="For administrators only"):
             st.session_state.page = 'admin_login'
             st.rerun()
-
-def admin_login_page():
-    """Admin-only login page"""
-    # Header with purple/red gradient like public page - compact
-    st.markdown("""
-        <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 0.8rem 0.5rem; border-radius: 8px; margin-bottom: 1rem;
-                    box-shadow: 0 2px 8px rgba(108, 3, 69, 0.3);'>
-            <h1 style='color: white; text-align: center; font-size: 1.5rem; margin: 0; 
-                       text-shadow: 2px 2px 4px rgba(0,0,0,0.2);'>
-                🔒 Admin Portal
-            </h1>
-            <p style='color: #F7C566; text-align: center; font-size: 0.8rem; margin: 0.3rem 0 0 0;
-                      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);'>
-                Authorized Personnel Only
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown("""
-            <div style='background: #1e1e1e; padding: 0.8rem; border-radius: 8px; 
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                        border: 1px solid #333333;'>
-                <h2 style='color: #ffffff; text-align: center; margin: 0; font-size: 1.1rem;'>
-                    🛡️ Administrator Login
-                </h2>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
-        
-        username = st.text_input("**Admin Username**", placeholder="Enter admin username", key="admin_username")
-        password = st.text_input("**Admin Password**", type="password", placeholder="Enter admin password", key="admin_password")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        col_a, col_b = st.columns(2)
-        
-        with col_a:
-            if st.button("🔐 Admin Login", use_container_width=True, type="primary"):
-                if username and password:
-                    user = st.session_state.app.verify_login(username, password, 'admin')
-                    if user:
-                        st.session_state.logged_in = True
-                        st.session_state.user = user
-                        st.session_state.role = 'admin'
-                        st.success(f"✅ Welcome, Administrator {user['name']}!")
-                        st.rerun()
-                    else:
-                        st.error("❌ Invalid admin credentials! Access denied.")
-                else:
-                    st.warning("⚠️ Please enter both username and password")
-        
-        with col_b:
-            if st.button("← Back to Login", use_container_width=True):
-                st.session_state.page = 'login'
-                st.rerun()
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Security warning
-        st.warning("⚠️ **Security Notice:** This area is restricted to authorized administrators only. Unauthorized access attempts are logged.")
 
 def register_page():
     """Display registration page"""
@@ -705,16 +1887,18 @@ def register_page():
                     elif any(u['id'] == user_id for u in existing_users):
                         st.error("❌ ID already exists!")
                     else:
-                        # Create new user
+                        # Create new user with hashed password
+                        password_hash, password_salt = hash_password(password)
                         new_user = {
                             'id': user_id,
                             'username': username,
-                            'password': password,
+                            'password_hash': password_hash,
+                            'password_salt': password_salt,
                             'name': name,
                             'contact': contact if contact else 'Not provided',
                             'email': email if email else 'Not provided'
                         }
-                        
+
                         if role_key not in st.session_state.app.users:
                             st.session_state.app.users[role_key] = []
                         
@@ -730,114 +1914,365 @@ def register_page():
                 st.rerun()
 
 def show_books_page():
-    """Display books catalog"""
-    # Show celebration modals if triggered
-    if st.session_state.get('show_borrow_success', False):
-        show_borrow_celebration()
-    
-    if st.session_state.get('show_return_success', False):
-        show_return_celebration(st.session_state.get('return_on_time', True))
-    
-    # Header with gradient - compact version
-    st.markdown("""
-        <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;'>
-            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.2rem;'>📚 Book Catalog</h2>
-            <p style='color: #F7C566; text-align: center; margin: 0.2rem 0 0 0; font-size: 0.75rem;'>
-                Browse and borrow books from our collection
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Search bar with better styling
-    col_search, col_filter = st.columns([3, 1])
-    with col_search:
-        search = st.text_input("🔍 Search books", placeholder="Search by title or author...", label_visibility="collapsed")
-    with col_filter:
-        st.write("")  # Spacing
-    
-    # Get books based on role
-    if st.session_state.role == 'teacher':
-        book_list = st.session_state.app.books['teacher_books']
-    elif st.session_state.role == 'admin':
-        book_list = st.session_state.app.books['student_books'] + st.session_state.app.books['teacher_books']
-    else:
-        book_list = st.session_state.app.books['student_books']
-    
-    # Filter books
-    if search:
-        book_list = [b for b in book_list if search.lower() in b['title'].lower() or search.lower() in b['author'].lower()]
-    
-    if not book_list:
-        st.info("📭 No books found matching your search!")
-        return
-    
-    st.markdown(f"<p style='color: #6C0345; font-weight: 600; margin: 1rem 0;'>Found {len(book_list)} book(s)</p>", unsafe_allow_html=True)
-    
-    # Display books in professional cards
-    for book in book_list:
-        # Determine availability status
-        if book['available'] > 0:
-            status_color = "#28a745"
-            status_text = "Available"
-            status_icon = "✅"
-        else:
-            status_color = "#dc3545"
-            status_text = "Not Available"
-            status_icon = "❌"
-        
-        # Create mobile-responsive dark card
-        st.markdown(f"""
-            <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
-                        margin: 0.5rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                        border-left: 4px solid {status_color};
-                        transition: all 0.3s ease;'>
-                <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
-                    <div style='flex: 1; min-width: 200px;'>
-                        <h3 style='color: #ffffff; margin: 0 0 0.3rem 0; font-size: 1.1rem;'>📖 {book['title']}</h3>
-                        <p style='color: #b0b0b0; margin: 0 0 0.2rem 0; font-size: 0.9rem;'>✍️ {book['author']}</p>
-                        <p style='color: #888888; margin: 0; font-size: 0.8rem;'>🆔 {book['id']}</p>
-                    </div>
-                    <div style='text-align: center; padding: 0 1rem; min-width: 100px;'>
-                        <div style='background: {status_color}; color: white; padding: 0.4rem 0.8rem; 
-                                    border-radius: 8px; font-weight: 600; font-size: 0.85rem;'>
-                            {status_icon} {status_text}
+    """Display books catalog with programme and special collections."""
+
+    def render_flash_banner():
+        reserve_info = st.session_state.pop('reserve_confirmation', None)
+        if reserve_info:
+            book_title = reserve_info.get('book_title', 'selected book')
+            reservation_id = reserve_info.get('reservation_id')
+            email_address = reserve_info.get('email')
+            email_status = reserve_info.get('email_status', 'unknown')
+            base_message = f"📬 Reservation confirmed for **{book_title}**"
+            if reservation_id:
+                base_message += f" (ID: {reservation_id})"
+
+            if email_status == 'sent' and email_address:
+                st.success(f"{base_message}. Confirmation email sent to **{email_address}**.")
+            elif email_status == 'failed':
+                error_detail = reserve_info.get('email_error')
+                detail_suffix = f" Reason: {error_detail}" if error_detail else ''
+                st.warning(f"{base_message}. Email notification could not be delivered.{detail_suffix}")
+            else:
+                st.info(base_message)
+
+        if st.session_state.get('show_borrow_success', False):
+            show_borrow_celebration()
+
+        if st.session_state.get('show_return_success', False):
+            show_return_celebration(st.session_state.get('return_on_time', True))
+
+    def render_header(title: str, subtitle: str):
+        st.markdown(
+            f"""
+            <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
+                        padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;'>
+                <h2 style='color: white; text-align: center; margin: 0; font-size: 1.2rem;'>{title}</h2>
+                <p style='color: #F7C566; text-align: center; margin: 0.2rem 0 0 0; font-size: 0.75rem;'>
+                    {subtitle}
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    def render_book_cards(book_list: list[dict]):
+        if not book_list:
+            st.info("📭 No titles available in this view yet!")
+            return
+
+        col_search, col_filter = st.columns([3, 1])
+        with col_search:
+            search = st.text_input(
+                "🔍 Search books",
+                placeholder="Search by title or author...",
+                label_visibility="collapsed",
+            )
+        with col_filter:
+            st.write("")
+
+        if search:
+            term = search.lower()
+            book_list = [
+                b
+                for b in book_list
+                if term in b.get('title', '').lower() or term in b.get('author', '').lower()
+            ]
+
+        if not book_list:
+            st.info("📭 No books found matching your search!")
+            return
+
+        st.markdown(
+            f"<p style='color: #6C0345; font-weight: 600; margin: 1rem 0;'>Found {len(book_list)} item(s)</p>",
+            unsafe_allow_html=True,
+        )
+
+        for book in book_list:
+            is_borrowable = bool(book.get('borrowable', True))
+            available = int(book.get('available', 0))
+            copies = int(book.get('copies', 0))
+            status_color = "#28a745" if available > 0 else "#dc3545"
+            status_text = "Available" if available > 0 else "Not Available"
+            status_icon = "✅" if available > 0 else "❌"
+            if not is_borrowable:
+                status_color = "#17a2b8"
+                status_text = "Reference Only"
+                status_icon = "📖"
+
+            extra_meta = []
+            if book.get('program_category'):
+                extra_meta.append(f"🎓 {book['program_category']}")
+            if book.get('programme'):
+                extra_meta.append(f"🏷️ {book['programme']}")
+            if book.get('format'):
+                extra_meta.append(f"📄 {book['format']}")
+            if book.get('issue_date'):
+                extra_meta.append(f"🗓️ {book['issue_date']}")
+            if book.get('collection'):
+                extra_meta.append(f"📚 {book['collection']}")
+
+            meta_html = """<p style='color: #888888; margin: 0; font-size: 0.8rem;'>""" + " • ".join(extra_meta) + "</p>" if extra_meta else ""
+
+            pdf_url = book.get('pdf_url')
+            pdf_html = ""
+            if isinstance(pdf_url, str) and pdf_url.strip():
+                pdf_html = (
+                    "<p style='color: #4facfe; margin: 0.4rem 0 0 0; font-size: 0.8rem;'>"
+                    "🔗 <a style='color: #4facfe;' href='{url}' target='_blank'>Read / Download</a>"
+                    "</p>"
+                ).format(url=pdf_url.strip())
+
+            st.markdown(
+                f"""
+                <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
+                            margin: 0.5rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            border-left: 4px solid {status_color};
+                            transition: all 0.3s ease;'>
+                    <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+                        <div style='flex: 1; min-width: 220px;'>
+                            <h3 style='color: #ffffff; margin: 0 0 0.3rem 0; font-size: 1.15rem;'>📖 {book.get('title')}</h3>
+                            <p style='color: #b0b0b0; margin: 0 0 0.2rem 0; font-size: 0.9rem;'>✍️ {book.get('author', 'Unknown')}</p>
+                            <p style='color: #888888; margin: 0; font-size: 0.8rem;'>🆔 {book.get('id')}</p>
+                            {meta_html}
+                            {pdf_html}
                         </div>
-                        <p style='margin: 0.4rem 0 0 0; font-size: 1.1rem; font-weight: 600; color: #ffffff;'>
-                            {book['available']}/{book['copies']}
-                        </p>
-                        <p style='margin: 0; font-size: 0.75rem; color: #888888;'>Available</p>
+                        <div style='text-align: center; padding: 0 1rem; min-width: 120px;'>
+                            <div style='background: {status_color}; color: white; padding: 0.4rem 0.8rem; 
+                                        border-radius: 8px; font-weight: 600; font-size: 0.85rem;'>
+                                {status_icon} {status_text}
+                            </div>
+                            <p style='margin: 0.4rem 0 0 0; font-size: 1.1rem; font-weight: 600; color: #ffffff;'>
+                                {available}/{copies}
+                            </p>
+                            <p style='margin: 0; font-size: 0.75rem; color: #888888;'>Copies</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Action buttons - responsive layout
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button(f"📥 Borrow", key=f"borrow_{book['id']}", use_container_width=True):
-                st.session_state[f"show_borrow_{book['id']}"] = True
-        
-        with col2:
-            if st.button(f"👥 Who Has?", key=f"who_{book['id']}", use_container_width=True):
-                st.session_state[f"show_who_{book['id']}"] = True
-        
-        with col3:
-            if st.button(f"ℹ️ Details", key=f"details_{book['id']}", use_container_width=True):
-                st.session_state[f"show_details_{book['id']}"] = True
-        
-        # Show modals if triggered
-        if st.session_state.get(f"show_borrow_{book['id']}", False):
-            show_borrow_modal(book)
-        
-        if st.session_state.get(f"show_who_{book['id']}", False):
-            show_who_has_modal(book)
-        
-        if st.session_state.get(f"show_details_{book['id']}", False):
-            show_details_modal(book)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
+
+            action_cols = st.columns(3)
+
+            with action_cols[0]:
+                if is_borrowable:
+                    if st.button(
+                        "📥 Borrow",
+                        key=f"borrow_{book['id']}",
+                        use_container_width=True,
+                        disabled=available <= 0,
+                    ):
+                        st.session_state[f"show_borrow_{book['id']}"] = True
+                else:
+                    st.button(
+                        "📖 Read", key=f"read_{book['id']}", use_container_width=True, disabled=not pdf_url
+                    )
+
+            with action_cols[1]:
+                if st.button(
+                    "👥 Who Has?",
+                    key=f"who_{book['id']}",
+                    use_container_width=True,
+                    disabled=not is_borrowable,
+                ):
+                    st.session_state[f"show_who_{book['id']}"] = True
+
+            with action_cols[2]:
+                if st.button(
+                    "ℹ️ Details",
+                    key=f"details_{book['id']}",
+                    use_container_width=True,
+                ):
+                    st.session_state[f"show_details_{book['id']}"] = True
+
+            if st.session_state.get(f"show_borrow_{book['id']}", False):
+                show_borrow_modal(book)
+            if st.session_state.get(f"show_who_{book['id']}", False):
+                show_who_has_modal(book)
+            if st.session_state.get(f"show_details_{book['id']}", False):
+                show_details_modal(book)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    def render_programme_view():
+        program_books = st.session_state.app.books.get('program_books', {})
+        if st.session_state.role == 'student' and not st.session_state.selected_program:
+            st.session_state.selected_program = st.session_state.user.get('programme')
+
+        categories = list(PROGRAM_CATEGORIES.keys())
+        active_program = st.session_state.selected_program
+
+        if st.session_state.role == 'student':
+            preferred_category = programme_category(active_program) or programme_category(
+                st.session_state.user.get('programme')
+            )
+            if preferred_category not in categories and categories:
+                preferred_category = categories[0]
+            with st.expander("🎓 Select Your Programme", expanded=active_program is None):
+                col_cat, col_prog = st.columns(2)
+                with col_cat:
+                    selected_category = (
+                        st.selectbox(
+                            "Faculty / Discipline",
+                            categories,
+                            index=categories.index(preferred_category) if preferred_category else 0,
+                        )
+                        if categories
+                        else None
+                    )
+                with col_prog:
+                    programmes = PROGRAM_CATEGORIES.get(selected_category, []) if selected_category else []
+                    selected_programme = (
+                        st.selectbox(
+                            "Programme",
+                            programmes,
+                            index=programmes.index(active_program)
+                            if active_program in programmes
+                            else 0,
+                        )
+                        if programmes
+                        else None
+                    )
+
+                if programmes and st.button("Set Programme", type="primary"):
+                    st.session_state.selected_program = selected_programme
+                    if selected_programme:
+                        st.session_state.user['programme'] = selected_programme
+                        st.session_state.app.save_data()
+                    st.rerun()
+
+            active_program = st.session_state.selected_program
+            if not active_program:
+                st.warning("कृपया अपना Programme चुनें ताकि आपको सही पुस्तकें दिखाई दें।")
+                return
+
+        if active_program and active_program not in program_books:
+            st.info("इस Programme के लिए अभी कोई पुस्तकें उपलब्ध नहीं हैं।")
+            return
+
+        book_list = programme_books(active_program) if active_program else []
+
+        latest_books = get_latest_programme_books(active_program, limit=6) if active_program else []
+        if latest_books:
+            slug = _slugify_program(active_program)
+            slider_key = f"latest_slider_{slug}"
+            st.session_state.setdefault(slider_key, 0)
+            total = len(latest_books)
+            current_index = st.session_state[slider_key] % total
+            current_book = latest_books[current_index]
+
+            st.markdown(
+                f"""
+                <div style='background: linear-gradient(135deg, #4facfe 0%, #6C0345 100%); border-radius: 12px; padding: 1.2rem; margin-top: 0.5rem;'>
+                    <p style='margin: 0; color: rgba(255,255,255,0.8); letter-spacing: 1px; font-size: 0.7rem;'>LATEST FOR YOUR PROGRAMME</p>
+                    <h3 style='margin: 0.3rem 0 0 0; color: #ffffff;'>🔥 Fresh Picks for {active_program}</h3>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            col_prev, col_card, col_next = st.columns([1, 6, 1])
+            with col_prev:
+                st.write("")
+                if total > 1 and st.button("◀", key=f"prev_{slider_key}", use_container_width=True):
+                    st.session_state[slider_key] = (current_index - 1) % total
+                    st.rerun()
+
+            with col_card:
+                availability_badge = (
+                    "<span style='background: rgba(40,167,69,0.15); color: #28a745; padding: 0.2rem 0.5rem; border-radius: 999px; font-size: 0.7rem;'>"
+                    f"{current_book['available']} / {current_book['copies']} Available"
+                    "</span>"
+                )
+                pdf_url = current_book.get('pdf_url')
+                pdf_link = (
+                    "<a href='{url}' target='_blank' style='color:#ffe066; text-decoration:none;'>📄 Download</a>"
+                ).replace('{url}', pdf_url.strip()) if isinstance(pdf_url, str) and pdf_url.strip() else ""
+
+                st.markdown(
+                    """
+                    <div style='background: #111111; border-radius: 12px; padding: 1.5rem; margin: 0.8rem 0; box-shadow: 0 8px 16px rgba(0,0,0,0.35);'>
+                        <div style='display:flex; flex-direction:column; gap:0.6rem;'>
+                            <div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;'>
+                                <span style='color: rgba(255,255,255,0.6); font-size: 0.75rem;'>Slide {current}/{total}</span>
+                                {availability}
+                            </div>
+                            <h2 style='color:#ffffff; margin:0; font-size:1.4rem;'>{title}</h2>
+                            <p style='color: rgba(255,255,255,0.7); margin:0; font-size:0.9rem;'>✍️ {author}</p>
+                            <div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;'>
+                                <span style='color: rgba(255,255,255,0.5); font-size:0.8rem;'>🆔 {book_id}</span>
+                                {pdf}
+                            </div>
+                        </div>
+                    </div>
+                    """.format(
+                        current=current_index + 1,
+                        total=total,
+                        availability=availability_badge,
+                        title=current_book['title'],
+                        author=current_book['author'],
+                        book_id=current_book['id'],
+                        pdf=pdf_link,
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+            with col_next:
+                st.write("")
+                if total > 1 and st.button("▶", key=f"next_{slider_key}", use_container_width=True):
+                    st.session_state[slider_key] = (current_index + 1) % total
+                    st.rerun()
+
+            st.markdown("<hr style='margin: 0.5rem 0 1rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+
+        render_book_cards(book_list)
+
+    def render_collection_view():
+        catalog = collection_catalog()
+        if not catalog:
+            st.info("नई collections जल्द ही जोड़ी जाएंगी।")
+            return
+
+        collection_names = list(catalog.keys())
+        default_collection = st.session_state.get('selected_collection', collection_names[0])
+        st.session_state['selected_collection'] = st.sidebar.selectbox(
+            "📚 Collection",
+            collection_names,
+            index=collection_names.index(default_collection) if default_collection in collection_names else 0,
+        )
+
+        active_collection = st.session_state['selected_collection']
+        items = collection_items(active_collection)
+        render_header(
+            f"{active_collection} Collection",
+            "Special resources, magazines, and reference material",
+        )
+        render_book_cards(items)
+
+    render_flash_banner()
+
+    if 'books_nav' not in st.session_state:
+        st.session_state.books_nav = 'Programmes'
+
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("**Catalog View**")
+        st.session_state.books_nav = st.radio(
+            "",
+            ["Programmes", "Special Collections"],
+            index=0 if st.session_state.books_nav == 'Programmes' else 1,
+            label_visibility="collapsed",
+        )
+
+    if st.session_state.books_nav == 'Programmes':
+        render_header(
+            "🎓 Programme Library",
+            "Browse books tailored to each academic programme",
+        )
+        render_programme_view()
+    else:
+        render_collection_view()
 
 @st.dialog("📥 Borrow Book")
 def show_borrow_modal(book):
@@ -902,6 +2337,71 @@ def show_borrow_modal(book):
                 st.rerun()
     else:
         st.error("❌ **Not Available** - All copies are currently borrowed")
+
+        current_user = st.session_state.user
+        existing_reservation = st.session_state.app.get_active_reservation(current_user['id'], book['id'])
+
+        if existing_reservation:
+            st.info(
+                f"📌 You already reserved this title on **{existing_reservation.get('reserved_at')}**. "
+                "We'll notify you when it becomes available."
+            )
+            st.caption(f"Reservation ID: {existing_reservation.get('id')}")
+            if st.button("Close", use_container_width=True):
+                st.session_state[f"show_borrow_{book['id']}"] = False
+                st.rerun()
+            return
+
+        st.info("📬 Reserve this book and we'll email you as soon as a copy is available.")
+
+        default_email = current_user.get('email') if isinstance(current_user.get('email'), str) else ''
+        if not default_email or default_email.lower() == 'not provided':
+            default_email = ''
+
+        email_state_key = f"reserve_email_{book['id']}"
+        if email_state_key not in st.session_state:
+            st.session_state[email_state_key] = default_email
+
+        form_key = f"reserve_form_{book['id']}"
+        with st.form(form_key):
+            email_value = st.text_input(
+                "Email address for reservation updates",
+                key=email_state_key,
+            )
+            st.caption("We'll send a confirmation now and alert you again when the book returns.")
+            submitted = st.form_submit_button("📬 Reserve Book", type="primary")
+
+        if submitted:
+            clean_email = email_value.strip()
+            if not clean_email:
+                st.warning("⚠️ कृपया अपना ईमेल पता दर्ज करें ताकि हम आपको सूचित कर सकें।")
+            elif '@' not in clean_email or '.' not in clean_email:
+                st.warning("⚠️ Valid ईमेल दर्ज करें (उदाहरण: name@example.com).")
+            else:
+                # Persist email with user profile
+                st.session_state.user['email'] = clean_email
+                st.session_state.app.update_user_email(current_user['id'], st.session_state.role, clean_email)
+
+                reservation = st.session_state.app.create_reservation(current_user, book)
+
+                email_status = 'sent'
+                email_error = None
+                sent, error = send_reservation_email(clean_email, current_user['name'], book, reservation)
+                if not sent:
+                    email_status = 'failed'
+                    email_error = error
+
+                st.session_state['reserve_confirmation'] = {
+                    'book_title': reservation.get('book_title'),
+                    'reservation_id': reservation.get('id'),
+                    'email': clean_email,
+                    'email_status': email_status,
+                    'email_error': email_error,
+                }
+
+                st.session_state[f"show_borrow_{book['id']}"] = False
+                st.rerun()
+
         if st.button("Close", use_container_width=True):
             st.session_state[f"show_borrow_{book['id']}"] = False
             st.rerun()
@@ -977,12 +2477,16 @@ def show_details_modal(book):
             <p style='color: #b0b0b0; margin: 0.5rem 0;'><strong>📖 Borrowed:</strong> {book['copies'] - book['available']}</p>
         </div>
     """, unsafe_allow_html=True)
-    
+
     # Availability status
     if book['available'] > 0:
         st.success(f"✅ **Available for borrowing** ({book['available']} copies)")
     else:
         st.error("❌ **Currently unavailable** - All copies are borrowed")
+
+    pdf_url = book.get('pdf_url')
+    if pdf_url:
+        st.link_button("📄 Download PDF", pdf_url, use_container_width=True)
     
     # Borrow info
     st.info("""
@@ -1039,6 +2543,7 @@ def borrow_book(book):
         'user_name': st.session_state.user['name'],
         'book_id': book['id'],
         'book_title': book['title'],
+        'book_programme': book.get('programme'),
         'borrow_date': datetime.now().strftime('%Y-%m-%d'),
         'due_date': due_date,
         'return_date': None,
@@ -1200,11 +2705,11 @@ def return_book(trans):
         trans['fine'] = days_late * 10
     
     # Update book availability
-    book_list = st.session_state.app.books['student_books'] if st.session_state.role != 'teacher' else st.session_state.app.books['teacher_books']
-    if st.session_state.role == 'admin':
-        book_list = st.session_state.app.books['student_books'] + st.session_state.app.books['teacher_books']
-    
-    book = next((b for b in book_list if b['id'] == trans['book_id']), None)
+    programme = trans.get('book_programme')
+    if programme:
+        book = next((b for b in programme_books(programme) if b['id'] == trans['book_id']), None)
+    else:
+        book = next((b for b in st.session_state.app.books['teacher_books'] if b['id'] == trans['book_id']), None)
     if book:
         book['available'] += 1
     
@@ -1214,291 +2719,6 @@ def return_book(trans):
     st.session_state['show_return_success'] = True
     st.session_state['return_on_time'] = on_time
     st.rerun()
-
-def admin_dashboard():
-    """Admin dashboard"""
-    # Header with gradient - compact
-    st.markdown("""
-        <div style='background: linear-gradient(135deg, #6C0345 0%, #DC143C 100%); 
-                    padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;'>
-            <h2 style='color: white; text-align: center; margin: 0; font-size: 1.2rem;'>📊 Admin Dashboard</h2>
-            <p style='color: #F7C566; text-align: center; margin: 0.2rem 0 0 0; font-size: 0.75rem;'>
-                Complete library overview and management
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Statistics with enhanced cards
-    col1, col2, col3, col4 = st.columns(4)
-    
-    total_users = len(st.session_state.app.users.get('students', [])) + len(st.session_state.app.users.get('teachers', []))
-    total_books = len(st.session_state.app.books['student_books']) + len(st.session_state.app.books['teacher_books'])
-    active_borrows = len([t for t in st.session_state.app.transactions if t['status'] == 'borrowed'])
-    total_fines = sum(t['fine'] for t in st.session_state.app.transactions)
-    
-    with col1:
-        st.markdown(f"""
-            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 0.8rem; border-radius: 8px; text-align: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
-                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{total_users}</h3>
-                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>👥 Users</p>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-            <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-                        padding: 0.8rem; border-radius: 8px; text-align: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
-                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{total_books}</h3>
-                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>📚 Books</p>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-            <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                        padding: 0.8rem; border-radius: 8px; text-align: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
-                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>{active_borrows}</h3>
-                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>📖 Borrows</p>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f"""
-            <div style='background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
-                        padding: 0.8rem; border-radius: 8px; text-align: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;'>
-                <h3 style='color: white; margin: 0; font-size: 1.5rem;'>₹{total_fines}</h3>
-                <p style='color: white; margin: 0.3rem 0 0 0; font-size: 0.8rem; opacity: 0.9;'>💰 Fines</p>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    st.divider()
-    
-    # Tabs
-    tab1, tab2, tab3 = st.tabs(["📚 Manage Books", "👥 Manage Users", "📈 Transactions"])
-    
-    with tab1:
-        manage_books_admin()
-    
-    with tab2:
-        manage_users_admin()
-    
-    with tab3:
-        view_all_transactions()
-
-def manage_books_admin():
-    """Admin book management"""
-    st.markdown("### 📚 Book Management")
-    
-    # Add new book
-    with st.expander("➕ Add New Book"):
-        col1, col2 = st.columns(2)
-        with col1:
-            book_id = st.text_input("Book ID", key="new_book_id")
-            title = st.text_input("Title", key="new_book_title")
-            author = st.text_input("Author", key="new_book_author")
-        with col2:
-            copies = st.number_input("Copies", min_value=1, value=1, key="new_book_copies")
-            category = st.selectbox("Category", ["Student", "Teacher"], key="new_book_cat")
-        
-        if st.button("💾 Add Book"):
-            if all([book_id, title, author]):
-                new_book = {
-                    'id': book_id.upper(),
-                    'title': title,
-                    'author': author,
-                    'copies': copies,
-                    'available': copies
-                }
-                
-                book_list = st.session_state.app.books['student_books'] if category == 'Student' else st.session_state.app.books['teacher_books']
-                book_list.append(new_book)
-                st.session_state.app.save_data()
-                st.success("✅ Book added successfully!")
-                st.rerun()
-            else:
-                st.error("❌ All fields required!")
-    
-    # List all books
-    st.markdown("### 📖 All Books")
-    all_books = st.session_state.app.books['student_books'] + st.session_state.app.books['teacher_books']
-    
-    for book in all_books:
-        with st.container():
-            col1, col2, col3 = st.columns([3, 2, 1])
-            
-            with col1:
-                st.write(f"**{book['title']}** by {book['author']}")
-                st.caption(f"ID: {book['id']}")
-            
-            with col2:
-                st.write(f"Available: {book['available']}/{book['copies']}")
-            
-            with col3:
-                if st.button("🗑️", key=f"del_book_{book['id']}"):
-                    # Check if borrowed
-                    active = [t for t in st.session_state.app.transactions if t['book_id'] == book['id'] and t['status'] == 'borrowed']
-                    if active:
-                        st.error("Cannot delete - book is borrowed!")
-                    else:
-                        # Remove book
-                        st.session_state.app.books['student_books'] = [b for b in st.session_state.app.books['student_books'] if b['id'] != book['id']]
-                        st.session_state.app.books['teacher_books'] = [b for b in st.session_state.app.books['teacher_books'] if b['id'] != book['id']]
-                        st.session_state.app.save_data()
-                        st.success("✅ Book deleted!")
-                        st.rerun()
-            
-            st.divider()
-
-def manage_users_admin():
-    """Admin user management"""
-    st.markdown("### 👥 User Management")
-    
-    # Add new user section
-    with st.expander("➕ Add New User"):
-        col1, col2 = st.columns(2)
-        with col1:
-            new_name = st.text_input("Full Name", key="new_user_name")
-            new_username = st.text_input("Username", key="new_user_username")
-            new_password = st.text_input("Password", type="password", key="new_user_password")
-            new_id = st.text_input("User ID", key="new_user_id")
-        with col2:
-            new_role = st.selectbox("Role", ["Student", "Teacher"], key="new_user_role")
-            new_contact = st.text_input("Contact", key="new_user_contact")
-            new_email = st.text_input("Email", key="new_user_email")
-        
-        if st.button("💾 Add User", use_container_width=True):
-            if all([new_name, new_username, new_password, new_id]):
-                # Check for duplicates
-                role_key = 'students' if new_role == 'Student' else 'teachers'
-                existing = any(u['username'] == new_username or u['id'] == new_id 
-                             for role in ['students', 'teachers'] 
-                             for u in st.session_state.app.users.get(role, []))
-                
-                if existing:
-                    st.error("❌ Username or ID already exists!")
-                else:
-                    new_user = {
-                        'id': new_id.upper(),
-                        'name': new_name,
-                        'username': new_username,
-                        'password': new_password,
-                        'contact': new_contact,
-                        'email': new_email
-                    }
-                    st.session_state.app.users[role_key].append(new_user)
-                    st.session_state.app.save_data()
-                    st.success(f"✅ User {new_name} added successfully!")
-                    st.rerun()
-            else:
-                st.error("❌ Name, Username, Password, and ID are required!")
-    
-    st.divider()
-    
-    # List all users with edit/delete
-    all_users = []
-    for role in ['students', 'teachers']:
-        for user in st.session_state.app.users.get(role, []):
-            all_users.append({**user, 'role': role})
-    
-    if all_users:
-        st.markdown(f"**Total Users:** {len(all_users)} (Students: {len(st.session_state.app.users.get('students', []))}, Teachers: {len(st.session_state.app.users.get('teachers', []))})")
-        st.divider()
-        
-        # Display users in dark cards
-        for idx, user in enumerate(all_users):
-            st.markdown(f"""
-                <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
-                            margin: 0.5rem 0; border-left: 4px solid #6C0345;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);'>
-                    <p style='color: #ffffff; margin: 0; font-weight: 600; font-size: 1.1rem;'>👤 {user['name']}</p>
-                    <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.9rem;'>
-                        🆔 {user['id']} | 👨‍💼 {user['role'].title()} | 📧 {user.get('email', 'N/A')} | 📱 {user.get('contact', 'N/A')}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2, col3 = st.columns([1, 1, 3])
-            with col1:
-                if st.button("✏️ Edit", key=f"edit_user_{idx}", use_container_width=True):
-                    st.session_state[f'editing_user_{idx}'] = True
-                    st.rerun()
-            with col2:
-                if st.button("🗑️ Delete", key=f"delete_user_{idx}", use_container_width=True):
-                    # Check for active borrows
-                    active_borrows = [t for t in st.session_state.app.transactions 
-                                    if t['user_id'] == user['id'] and t['status'] == 'borrowed']
-                    if active_borrows:
-                        st.error(f"❌ Cannot delete! {user['name']} has {len(active_borrows)} active borrow(s)")
-                    else:
-                        st.session_state.app.users[user['role']] = [u for u in st.session_state.app.users[user['role']] if u['id'] != user['id']]
-                        st.session_state.app.save_data()
-                        st.success(f"✅ User {user['name']} deleted!")
-                        st.rerun()
-            
-            # Edit form
-            if st.session_state.get(f'editing_user_{idx}', False):
-                with st.expander(f"✏️ Edit {user['name']}", expanded=True):
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        edit_name = st.text_input("Name", value=user['name'], key=f"edit_name_{idx}")
-                        edit_username = st.text_input("Username", value=user['username'], key=f"edit_username_{idx}")
-                        edit_password = st.text_input("Password", value=user['password'], type="password", key=f"edit_password_{idx}")
-                    with col_b:
-                        edit_contact = st.text_input("Contact", value=user.get('contact', ''), key=f"edit_contact_{idx}")
-                        edit_email = st.text_input("Email", value=user.get('email', ''), key=f"edit_email_{idx}")
-                    
-                    col_save, col_cancel = st.columns(2)
-                    with col_save:
-                        if st.button("💾 Save Changes", key=f"save_{idx}", use_container_width=True):
-                            # Update user
-                            for u in st.session_state.app.users[user['role']]:
-                                if u['id'] == user['id']:
-                                    u['name'] = edit_name
-                                    u['username'] = edit_username
-                                    u['password'] = edit_password
-                                    u['contact'] = edit_contact
-                                    u['email'] = edit_email
-                                    break
-                            st.session_state.app.save_data()
-                            st.session_state[f'editing_user_{idx}'] = False
-                            st.success("✅ User updated successfully!")
-                            st.rerun()
-                    with col_cancel:
-                        if st.button("❌ Cancel", key=f"cancel_{idx}", use_container_width=True):
-                            st.session_state[f'editing_user_{idx}'] = False
-                            st.rerun()
-            
-            st.divider()
-    else:
-        st.info("No users found")
-
-def view_all_transactions():
-    """View all transactions"""
-    st.markdown("### 📈 All Transactions")
-    
-    if st.session_state.app.transactions:
-        # Display transactions in dark cards
-        for trans in st.session_state.app.transactions:
-            status_color = "#28a745" if trans['status'] == 'returned' else "#ffc107"
-            st.markdown(f"""
-                <div style='background: #1e1e1e; padding: 1rem; border-radius: 10px; 
-                            margin: 0.5rem 0; border-left: 4px solid {status_color};
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);'>
-                    <p style='color: #ffffff; margin: 0; font-weight: 600;'>{trans['user_name']} - {trans['book_title']}</p>
-                    <p style='color: #b0b0b0; margin: 0.3rem 0 0 0; font-size: 0.85rem;'>
-                        📅 Borrowed: {trans['borrow_date']} | Due: {trans['due_date']} | 
-                        Status: <span style='color: {status_color};'>{trans['status'].title()}</span>
-                    </p>
-                    {f"<p style='color: #dc3545; margin: 0.3rem 0 0 0; font-weight: 600;'>💰 Fine: ₹{trans['fine']}</p>" if trans['fine'] > 0 else ""}
-                </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.info("No transactions yet")
 
 def main():
     """Main application"""
